@@ -1,0 +1,77 @@
+[    0.000000] Linux version 6.6.114.1-microsoft-standard-WSL2 (root@507f3e43091d) (gcc (GCC) 13.2.0, GNU ld (GNU Binutils) 2.41) #1 SMP PREEMPT_DYNAMIC Mon Dec  1 20:46:23 UTC 2025
+[    0.000000] Command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init tsc=reliable clocksource=tsc hpet=off highres=off nohz=off 
+[    0.000000] KERNEL supported cpus:
+[    0.000000]   Intel GenuineIntel
+[    0.000000]   AMD AuthenticAMD
+[    0.000000] Intel Spectre v2 broken microcode detected; disabling Speculation Control
+[    0.000000] Disabled fast string operations
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009efff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009f000-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000001fffffff] usable
+[    0.000000] printk: bootconsole [earlyser0] enabled
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] APIC: Static calls initialized
+[    0.000000] DMI not present or invalid.
+[    0.000000] last_pfn = 0x20000 max_arch_pfn = 0x400000000
+[    0.000000] MTRRs disabled by BIOS
+[    0.000000] x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+Memory KASLR using RDRAND RDTSC...
+[    0.000000] Using GB pages for direct mapping
+[    0.000000] RAMDISK: [mem 0x1fee1000-0x1fffffff]
+[    0.000000] ACPI: Early table checksum verification disabled
+[    0.000000] ACPI BIOS Error (bug): A valid RSDP was not found (20230628/tbxfroot-222)
+[    0.000000] No NUMA configuration found
+[    0.000000] Faking a node at [mem 0x0000000000000000-0x000000001fffffff]
+[    0.000000] NODE_DATA(0) allocated [mem 0x1febf000-0x1fee0fff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA32    [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000]   Normal   empty
+[    0.000000]   Device   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000001000-0x000000000009efff]
+[    0.000000]   node   0: [mem 0x0000000000100000-0x000000001fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000] On node 0, zone DMA32: 1 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA32: 97 pages in unavailable ranges
+[    0.000000] smpboot: Allowing 1 CPUs, 0 hotplug CPUs
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x00000000-0x00000fff]
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x0009f000-0x000fffff]
+[    0.000000] [mem 0x20000000-0xffffffff] available for PCI devices
+[    0.000000] Booting paravirtualized kernel on bare hardware
+[    0.000000] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645519600211568 ns
+[    0.000000] setup_percpu: NR_CPUS:8192 nr_cpumask_bits:1 nr_cpu_ids:1 nr_node_ids:1
+[    0.000000] percpu: Embedded 63 pages/cpu s221184 r8192 d28672 u2097152
+[    0.000000] Kernel command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init tsc=reliable clocksource=tsc hpet=off highres=off nohz=off 
+[    0.000000] random: crng init done
+[    0.000000] Dentry cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 128768
+[    0.000000] Policy zone: DMA32
+[    0.000000] mem auto-init: stack:off, heap alloc:on, heap free:off
+[    0.000000] Memory: 260860K/523896K available (20480K kernel code, 3451K rwdata, 13596K rodata, 4480K init, 6224K bss, 60376K reserved, 0K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+[    0.000000] Kernel/User page tables isolation: enabled
+Poking KASLR using RDRAND RDTSC...
+[    0.000000] ftrace: allocating 55788 entries in 218 pages
+[    0.000000] ftrace: allocated 218 pages with 5 groups
+[    0.000000] Dynamic Preempt: none
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=8192 to nr_cpu_ids=1.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Rude variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+[    0.000000] NR_IRQS: 524544, nr_irqs: 32, preallocated irqs: 16
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] Console: colour dummy device 80x25
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] APIC: ACPI MADT or MP tables are not detected
+[    0.004000] APIC: Switch to virtual wire mode setup with no configuration
+[    0.012000] Not enabling interrupt remapping due to skipped IO-APIC setup

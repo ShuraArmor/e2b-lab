@@ -1,0 +1,109 @@
+[*] 布置引导状态...
+    xloadflags=0x003B  64位入口: 是
+    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
+    ACPI: RSDP@0xF0000 XSDT@0xF1000 FACP@0xF2000 DSDT(242B)@0xF4000 MCFG@0xF6000
+    virtio-net 已挂载 @ 0xC0000000（TAP: tap0，MAC 52:54:00:4C:45:4D）
+    CPUID: 精选白名单 12 条已灌入
+[*] 点火！客户机输出如下：
+------------------------------------------------------------
+
+
+KASLR disabled: 'nokaslr' on cmdline.
+
+[    0.000000] Linux version 6.6.114.1-microsoft-standard-WSL2 (root@507f3e43091d) (gcc (GCC) 13.2.0, GNU ld (GNU Binutils) 2.41) #1 SMP PREEMPT_DYNAMIC Mon Dec  1 20:46:23 UTC 2025
+[    0.000000] Command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init nokaslr 
+[    0.000000] KERNEL supported cpus:
+[    0.000000]   Intel GenuineIntel
+[    0.000000]   AMD AuthenticAMD
+[    0.000000] CPU: vendor_id 'GenuntelineI' unknown, using generic init.
+[    0.000000] CPU: Your system may be unstable.
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009efff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009f000-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000001fffffff] usable
+[    0.000000] printk: bootconsole [earlyser0] enabled
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] APIC: Static calls initialized
+[    0.000000] DMI not present or invalid.
+[    0.000000] last_pfn = 0x20000 max_arch_pfn = 0x400000000
+[    0.000000] MTRRs disabled by BIOS
+[    0.000000] x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+[    0.000000] RAMDISK: [mem 0x1f488000-0x1fffffff]
+[    0.000000] ACPI: Early table checksum verification disabled
+[    0.000000] ACPI: RSDP 0x00000000000F0000 000024 (v02 LEMU  )
+[    0.000000] ACPI: XSDT 0x00000000000F1000 00003C (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
+[    0.000000] ACPI: FACP 0x00000000000F2000 000114 (v05 LEMU   LEMUVM01 00000001 LEMU 00000001)
+[    0.000000] ACPI: DSDT 0x00000000000F4000 0000F2 (v02 LEMU   LEMUVIRT 00000002 INTL 20230628)
+[    0.000000] ACPI: DSDT 0x00000000000F4000 0000F2 (v02 LEMU   LEMUVIRT 00000002 INTL 20230628)
+[    0.000000] ACPI: MCFG 0x00000000000F6000 00003C (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
+[    0.000000] ACPI: Reserving FACP table memory at [mem 0xf2000-0xf2113]
+[    0.000000] ACPI: Reserving DSDT table memory at [mem 0xf4000-0xf40f1]
+[    0.000000] ACPI: Reserving DSDT table memory at [mem 0xf4000-0xf40f1]
+[    0.000000] ACPI: Reserving MCFG table memory at [mem 0xf6000-0xf603b]
+[    0.000000] No NUMA configuration found
+[    0.000000] Faking a node at [mem 0x0000000000000000-0x000000001fffffff]
+[    0.000000] NODE_DATA(0) allocated [mem 0x1f466000-0x1f487fff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA32    [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000]   Normal   empty
+[    0.000000]   Device   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000001000-0x000000000009efff]
+[    0.000000]   node   0: [mem 0x0000000000100000-0x000000001fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000] On node 0, zone DMA32: 1 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA32: 97 pages in unavailable ranges
+[    0.000000] smpboot: Allowing 1 CPUs, 0 hotplug CPUs
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x00000000-0x00000fff]
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x0009f000-0x000fffff]
+[    0.000000] [mem 0x20000000-0xffffffff] available for PCI devices
+[    0.000000] Booting paravirtualized kernel on bare hardware
+[    0.000000] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645519600211568 ns
+[    0.000000] setup_percpu: NR_CPUS:8192 nr_cpumask_bits:1 nr_cpu_ids:1 nr_node_ids:1
+[    0.000000] percpu: Embedded 63 pages/cpu s221184 r8192 d28672 u2097152
+[    0.000000] Kernel command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init nokaslr 
+[    0.000000] Unknown kernel command line parameters "nokaslr", will be passed to user space.
+[    0.000000] random: crng init done
+[    0.000000] Dentry cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 128768
+[    0.000000] Policy zone: DMA32
+[    0.000000] mem auto-init: stack:off, heap alloc:on, heap free:off
+[    0.000000] Memory: 211664K/523896K available (20480K kernel code, 3451K rwdata, 13596K rodata, 4480K init, 6224K bss, 70972K reserved, 0K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+[    0.000000] Kernel/User page tables isolation: enabled
+Poking KASLR using RDRAND RDTSC...
+[    0.000000] ftrace: allocating 55788 entries in 218 pages
+[    0.000000] ftrace: allocated 218 pages with 5 groups
+[    0.000000] Dynamic Preempt: none
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=8192 to nr_cpu_ids=1.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Rude variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+[    0.000000] NR_IRQS: 524544, nr_irqs: 16, preallocated irqs: 0
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] Console: colour dummy device 80x25
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] ACPI: Core revision 20230628
+[    0.000000] ACPI: setting ELCR to 0001 (from 0000)
+[    0.000000] APIC: ACPI MADT or MP tables are not detected
+[    0.000000] APIC: Switch to virtual wire mode setup with no configuration
+[    0.000000] Not enabling interrupt remapping due to skipped IO-APIC setup
+[    0.000000] tsc: Unable to calibrate against PIT
+[    0.000000] tsc: No reference (HPET/PMTIMER) available
+[    0.000000] tsc: Marking TSC unstable due to could not calculate TSC khz
+
+[lemu] 超时/客户机停摆 —— 转储现场：
+[timeout] RIP=0xFFFFFFFF810033C7 CR2=0xFFFF888004000000 CR3=0x3232000
+[timeout] RAX=0xFFFEDB08 RBX=0x9 RCX=0xC0000000FFFFDFFF RDX=0xFFFEDB08
+[取证] CR2 页表遍历: L0[273]=0x4000067 | L1[0]=0x4001067 | L2[32]=0x80000000040000E3 | 大页→物理基址0x8000000004000000
+[取证] RIP 物理 0x10033C7 前后字节: 9e02000f846c020000488b15f9452002488b05f24520024839c274f4488b05e6
+[lemu] 会话日志: /mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/logs/lemu-0925-220601.log

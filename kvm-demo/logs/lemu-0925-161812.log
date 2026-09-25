@@ -1,0 +1,256 @@
+
+
+KASLR disabled: 'nokaslr' on cmdline.
+
+[    0.000000] Linux version 6.6.114.1-microsoft-standard-WSL2 (root@507f3e43091d) (gcc (GCC) 13.2.0, GNU ld (GNU Binutils) 2.41) #1 SMP PREEMPT_DYNAMIC Mon Dec  1 20:46:23 UTC 2025
+[    0.000000] Command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init nokaslr 
+[    0.000000] KERNEL supported cpus:
+[    0.000000]   Intel GenuineIntel
+[    0.000000]   AMD AuthenticAMD
+[    0.000000] CPU: vendor_id 'GenuntelineI' unknown, using generic init.
+[    0.000000] CPU: Your system may be unstable.
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009efff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009f000-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000001fffffff] usable
+[    0.000000] printk: bootconsole [earlyser0] enabled
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] APIC: Static calls initialized
+[    0.000000] DMI not present or invalid.
+[    0.000000] last_pfn = 0x20000 max_arch_pfn = 0x400000000
+[    0.000000] MTRRs disabled by BIOS
+[    0.000000] x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+[    0.000000] RAMDISK: [mem 0x1fee1000-0x1fffffff]
+[    0.000000] ACPI: Early table checksum verification disabled
+[    0.000000] ACPI BIOS Error (bug): A valid RSDP was not found (20230628/tbxfroot-222)
+[    0.000000] No NUMA configuration found
+[    0.000000] Faking a node at [mem 0x0000000000000000-0x000000001fffffff]
+[    0.000000] NODE_DATA(0) allocated [mem 0x1febf000-0x1fee0fff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA32    [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000]   Normal   empty
+[    0.000000]   Device   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000001000-0x000000000009efff]
+[    0.000000]   node   0: [mem 0x0000000000100000-0x000000001fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000000001000-0x000000001fffffff]
+[    0.000000] On node 0, zone DMA32: 1 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA32: 97 pages in unavailable ranges
+[    0.000000] smpboot: Allowing 1 CPUs, 0 hotplug CPUs
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x00000000-0x00000fff]
+[    0.000000] PM: hibernation: Registered nosave memory: [mem 0x0009f000-0x000fffff]
+[    0.000000] [mem 0x20000000-0xffffffff] available for PCI devices
+[    0.000000] Booting paravirtualized kernel on bare hardware
+[    0.000000] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645519600211568 ns
+[    0.000000] setup_percpu: NR_CPUS:8192 nr_cpumask_bits:1 nr_cpu_ids:1 nr_node_ids:1
+[    0.000000] percpu: Embedded 63 pages/cpu s221184 r8192 d28672 u2097152
+[    0.000000] Kernel command line: console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 rdinit=/init nokaslr 
+[    0.000000] Unknown kernel command line parameters "nokaslr", will be passed to user space.
+[    0.000000] random: crng init done
+[    0.000000] Dentry cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 128768
+[    0.000000] Policy zone: DMA32
+[    0.000000] mem auto-init: stack:off, heap alloc:on, heap free:off
+[    0.000000] Memory: 211664K/523896K available (20480K kernel code, 3451K rwdata, 13596K rodata, 4480K init, 6224K bss, 60376K reserved, 0K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+[    0.000000] Kernel/User page tables isolation: enabled
+Poking KASLR using RDRAND RDTSC...
+[    0.000000] ftrace: allocating 55788 entries in 218 pages
+[    0.000000] ftrace: allocated 218 pages with 5 groups
+[    0.000000] Dynamic Preempt: none
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=8192 to nr_cpu_ids=1.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Rude variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+[    0.000000] NR_IRQS: 524544, nr_irqs: 32, preallocated irqs: 16
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] Console: colour dummy device 80x25
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] printk: bootconsole [earlyser0] disabled
+[    0.000000] APIC: ACPI MADT or MP tables are not detected
+[    0.000000] APIC: Switch to virtual wire mode setup with no configuration
+[    0.008000] Not enabling interrupt remapping due to skipped IO-APIC setup
+[    0.016000] tsc: Unable to calibrate against PIT
+[    0.020000] tsc: No reference (HPET/PMTIMER) available
+[    0.028000] tsc: Marking TSC unstable due to could not calculate TSC khz
+[    0.036000] Calibrating delay loop... 6049.79 BogoMIPS (lpj=12099584)
+[    0.068000] mce: unknown CPU type - not enabling MCE support
+[    0.076000] Last level iTLB entries: 4KB 0, 2MB 0, 4MB 0
+[    0.084000] Last level dTLB entries: 4KB 0, 2MB 0, 4MB 0, 1GB 0
+[    0.088000] Spectre V1 : Mitigation: usercopy/swapgs barriers and __user pointer sanitization
+[    0.092000] Spectre V2 : Mitigation: Retpolines
+[    0.100000] Spectre V2 : Spectre v2 / SpectreRSB: Filling RSB on context switch and VMEXIT
+[    0.104000] Speculative Store Bypass: Vulnerable
+[    0.108000] MDS: Vulnerable: Clear CPU buffers attempted, no microcode
+[    0.112000] MMIO Stale Data: Unknown: No mitigations
+[    0.116000] x86/fpu: x87 FPU will use FXSAVE
+[    0.172000] Freeing SMP alternatives memory: 44K
+[    0.176000] pid_max: default: 32768 minimum: 301
+[    0.188000] LSM: initializing lsm=capability,landlock,yama,safesetid,selinux,integrity
+[    0.192000] landlock: Up and running.
+[    0.196000] Yama: becoming mindful.
+[    0.204000] SELinux:  Initializing.
+[    0.212000] Mount-cache hash table entries: 1024 (order: 1, 8192 bytes, linear)
+[    0.220000] Mountpoint-cache hash table entries: 1024 (order: 1, 8192 bytes, linear)
+[    0.228000] smpboot: SMP disabled
+[    0.236000] RCU Tasks: Setting shift to 0 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=1.
+[    0.244000] RCU Tasks Rude: Setting shift to 0 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=1.
+[    0.252000] RCU Tasks Trace: Setting shift to 0 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=1.
+[    0.260000] Performance Events: no PMU driver, software events only.
+[    0.268000] signal: max sigframe size: 1440
+[    0.276000] rcu: Hierarchical SRCU implementation.
+[    0.280000] rcu: 	Max phase no-delay instances is 1000.
+[    0.288000] NMI watchdog: Perf NMI watchdog permanently disabled
+[    0.296000] smp: Bringing up secondary CPUs ...
+[    0.304000] smp: Brought up 1 node, 1 CPU
+[    0.308000] smpboot: Max logical packages: 1
+[    0.316000] smpboot: Total of 1 processors activated (6049.79 BogoMIPS)
+[    0.336000] node 0 deferred pages initialised in 12ms
+[    0.344000] devtmpfs: initialized
+[    0.352000] x86/mm: Memory block size: 128MB
+[    0.360000] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.364000] futex hash table entries: 256 (order: 2, 16384 bytes, linear)
+[    0.372000] pinctrl core: initialized pinctrl subsystem
+[    0.384000] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.392000] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[    0.400000] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[    0.408000] audit: initializing netlink subsys (disabled)
+[    0.416000] thermal_sys: Registered thermal governor 'step_wise'
+[    0.416000] thermal_sys: Registered thermal governor 'user_space'
+[    0.424000] audit: type=2000 audit(943920000.416:1): state=initialized audit_enabled=0 res=1
+[    0.440000] cpuidle: using governor ladder
+[    0.448000] cpuidle: using governor menu
+[    0.456000] dca service started, version 1.12.1
+[    0.472000] PCI: Fatal: No config space access function found
+[    0.480000] kprobes: kprobe jump-optimization is enabled. All kprobes are optimized if possible.
+[    0.520000] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[    0.528000] HugeTLB: 28 KiB vmemmap can be freed for a 2.00 MiB page
+[    0.556000] cryptd: max_cpu_qlen set to 1000
+[    0.568000] ACPI: Interpreter disabled.
+[    0.580000] iommu: Default domain type: Translated
+[    0.584000] iommu: DMA domain TLB invalidation policy: lazy mode
+[    0.592000] SCSI subsystem initialized
+[    0.600000] pps_core: LinuxPPS API ver. 1 registered
+[    0.604000] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.612000] PTP clock support registered
+[    0.624000] EDAC MC: Ver: 3.0.0
+[    0.636000] NetLabel: Initializing
+[    0.640000] NetLabel:  domain hash size = 128
+[    0.648000] NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
+[    0.656000] NetLabel:  unlabeled traffic allowed by default
+[    0.660000] PCI: System does not support PCI
+[    0.668000] vgaarb: loaded
+[    0.676000] clocksource: Switched to clocksource refined-jiffies
+[    0.688000] VFS: Disk quotas dquot_6.6.0
+[    0.696001] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[    0.704001] FS-Cache: Loaded
+[    0.716002] pnp: PnP ACPI: disabled
+[    0.724003] NET: Registered PF_INET protocol family
+[    0.732003] IP idents hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.740004] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[    0.748004] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.756005] TCP established hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.764005] TCP bind hash table entries: 4096 (order: 5, 131072 bytes, linear)
+[    0.772006] TCP: Hash tables configured (established 4096 bind 4096)
+[    0.780006] UDP hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.788007] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.796007] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.804008] NET: Registered PF_XDP protocol family
+[    0.812008] PCI: CLS 0 bytes, default 64
+[    0.820009] platform rtc_cmos: registered platform RTC device (no PNP device found)
+[    0.828009] Trying to unpack rootfs image as initramfs...
+[    0.836010] Initialise system trusted keyrings
+[    0.844010] Key type blacklist registered
+[    0.860011] workingset: timestamp_bits=36 max_order=17 bucket_order=0
+[    0.872012] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.880012] fuse: init (API version 7.39)
+[    0.900014] Freeing initrd memory: 1148K
+[    0.908014] SGI XFS with ACLs, security attributes, realtime, verbose warnings, quota, no debug enabled
+[    0.920015] 9p: Installing v9fs 9p2000 file system support
+[    0.936016] Key type asymmetric registered
+[    0.944016] Asymmetric key parser 'x509' registered
+[    0.952017] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 245)
+[    0.960017] io scheduler mq-deadline registered
+[    0.968018] io scheduler kyber registered
+[    0.976018] ioatdma: Intel(R) QuickData Technology Driver 5.00
+[    0.984019] Serial: 8250/16550 driver, 8 ports, IRQ sharing enabled
+[    0.992019] serial8250: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+[    1.004020] Linux agpgart interface v0.103
+[    1.012021] AMD-Vi: AMD IOMMUv2 functionality not available on this system - This is not a bug.
+[    1.020021] brd: module loaded
+[    1.028022] loop: module loaded
+[    1.036022] Loading iSCSI transport class v2.0-870.
+[    1.044023] rdac: device handler registered
+[    1.052023] Microchip SmartPQI Driver (v2.1.24-046)
+[    1.060024] VMware PVSCSI driver - version 1.0.7.0-k
+[    1.068024] hv_vmbus: registering driver hv_storvsc
+[    1.076025] PPP generic driver version 2.4.2
+[    1.084025] VMware vmxnet3 virtual NIC driver - version 1.7.0.0-k-NAPI
+[    1.092026] hv_vmbus: registering driver hv_netvsc
+[    1.100026] Fusion MPT base driver 3.04.20
+[    1.108027] Copyright (c) 1999-2008 LSI Corporation
+[    1.116027] Fusion MPT SPI Host driver 3.04.20
+[    1.124028] Fusion MPT SAS Host driver 3.04.20
+[    1.132028] Fusion MPT misc device (ioctl) driver 3.04.20
+[    1.140029] mptctl: Registered with Fusion MPT base driver
+[    1.148029] mptctl: /dev/mptctl @ (major,minor=10,220)
+[    1.156030] i8042: PNP: No PS/2 controller found.
+[    1.160030] i8042: Probing ports directly.
+[    1.176031] i8042: Can't read CTR while initializing i8042
+[    1.180031] i8042: probe of i8042 failed with error -5
+[    1.188032] hv_vmbus: registering driver hyperv_keyboard
+[    1.196032] rtc_cmos rtc_cmos: only 24-hr supported
+[    1.204033] device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.
+[    1.212033] device-mapper: uevent: version 1.0.3
+[    1.220034] device-mapper: ioctl: 4.48.0-ioctl (2023-03-01) initialised: dm-devel@redhat.com
+[    1.228034] hv_utils: Registering HyperV Utility Driver
+[    1.236035] hv_vmbus: registering driver hv_utils
+[    1.240035] hv_vmbus: registering driver hv_balloon
+[    1.252036] hv_vmbus: registering driver dxgkrnl
+[    1.260036] misc dxg: dxgk: dxg_drv_init: vmbus_driver_register failed: -19
+[    1.268037] drop_monitor: Initializing network drop monitor service
+[    1.300039] NET: Registered PF_INET6 protocol family
+[    1.308039] Segment Routing with IPv6
+[    1.316040] In-situ OAM (IOAM) with IPv6
+[    1.324040] NET: Registered PF_PACKET protocol family
+[    1.332041] 9pnet: Installing 9P2000 support
+[    1.340041] NET: Registered PF_VSOCK protocol family
+[    1.348042] mce: Unable to init MCE device (rc: -5)
+[    1.356042] microcode: no support for this CPU vendor
+[    1.364043] IPI shorthand broadcast: enabled
+[    1.372043] registered taskstats version 1
+[    1.380044] Loading compiled-in X.509 certificates
+[    1.392044] ima: No TPM chip found, activating TPM-bypass!
+[    1.400045] ima: Allocated hash algorithm: sha256
+[    1.408045] ima: No architecture policies found
+[    1.484050] RAS: Correctable Errors collector initialized.
+[    1.492051] Unstable clock detected, switching default tracing clock to "global"
+[    1.492051] If you want to keep using the local clock, then add:
+[    1.492051]   "trace_clock=local"
+[    1.492051] on the kernel command line
+[    1.500051] clk: Disabling unused clocks
+[    1.512052] Freeing unused decrypted memory: 2028K
+[    1.524053] Freeing unused kernel image (initmem) memory: 4480K
+[    1.532053] Write protecting the kernel read-only data: 34816k
+[    1.540054] Freeing unused kernel image (rodata/data gap) memory: 740K
+[    1.548054] Run /init as init process
+ifconfig: SIOCSIFADDR: No such device
+route: SIOCADDRT: Network is unreachable
+================================================
+ LEMU Linux 就绪: eth0=10.0.2.15  httpd=:80
+================================================
+
+
+BusyBox v1.36.1 (Ubuntu 1:1.36.1-6ubuntu3.1) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+sh: can't access tty; job control turned off
+~ # [6n

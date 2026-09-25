@@ -353,6 +353,8 @@ ACPI_RSDP_ADDR = 0xF0000    # RSDP 扫描范围 0xE0000-0xFFFFF 内
 ACPI_XSDT_ADDR = 0xF1000
 ACPI_FACP_ADDR = 0xF2000
 ACPI_DSDT_ADDR = 0xF4000
+ACPI_MCFG_ADDR = 0xF6000    # MCFG：ECAM 声明（PCIe 现代配置空间）
+PCI_ECAM_BASE = 0xE0000000  # ECAM 窗口：bus0 一共 1MB（32设备×8功能×4KB），RAM 之外
 
 
 def _table_checksum(tbl: bytearray):
@@ -397,9 +399,18 @@ def build_acpi(guest_mem, dsdt_bytes):
     _table_checksum(facp)
     guest_mem[ACPI_FACP_ADDR:ACPI_FACP_ADDR + len(facp)] = facp
 
-    # ---- XSDT（指向 FACP 和 DSDT）----
-    xsdt = _table_header(b"XSDT", 36 + 16, rev=1)
-    struct.pack_into("<QQ", xsdt, 36, ACPI_FACP_ADDR, ACPI_DSDT_ADDR)
+    # ---- MCFG：声明 ECAM 窗口（PCIe 现代配置空间访问方式）----
+    # 布局：36B 标准头 + 8B 保留 + 每条目 16B（基址u64, segment u16, 起止bus u8×2, 保留u32）
+    mcfg = _table_header(b"MCFG", 60, rev=1)
+    struct.pack_into("<Q", mcfg, 36, PCI_ECAM_BASE)
+    struct.pack_into("<HBBI", mcfg, 44, 0, 0, 0, 0)              # seg 0, bus 0-0, 保留
+    _table_checksum(mcfg)
+    guest_mem[ACPI_MCFG_ADDR:ACPI_MCFG_ADDR + len(mcfg)] = mcfg
+
+    # ---- XSDT（指向 FACP / DSDT / MCFG）----
+    xsdt = _table_header(b"XSDT", 36 + 24, rev=1)
+    struct.pack_into("<QQQ", xsdt, 36, ACPI_FACP_ADDR, ACPI_DSDT_ADDR,
+                     ACPI_MCFG_ADDR)
     _table_checksum(xsdt)
     guest_mem[ACPI_XSDT_ADDR:ACPI_XSDT_ADDR + len(xsdt)] = xsdt
 
@@ -417,7 +428,8 @@ def build_acpi(guest_mem, dsdt_bytes):
     rsdp[32] = (256 - (sum(rsdp[0:36]) & 0xFF)) & 0xFF   # 扩展校验和（全 36 字节）
     guest_mem[ACPI_RSDP_ADDR:ACPI_RSDP_ADDR + 36] = rsdp
     log(f"    ACPI: RSDP@0x{ACPI_RSDP_ADDR:X} XSDT@0x{ACPI_XSDT_ADDR:X} "
-        f"FACP@0x{ACPI_FACP_ADDR:X} DSDT({dsdt_len}B)@0x{ACPI_DSDT_ADDR:X}")
+        f"FACP@0x{ACPI_FACP_ADDR:X} DSDT({dsdt_len}B)@0x{ACPI_DSDT_ADDR:X} "
+        f"MCFG@0x{ACPI_MCFG_ADDR:X}")
 
 
 def setup_msr_passthrough(vm_fd, kvm_fd):
@@ -463,7 +475,8 @@ def main():
     ap.add_argument("--trace", action="store_true", help="打印每次 VM exit 的 RIP")
     ap.add_argument("--net", action="store_true", help="启用 virtio-net 网卡（需 root + tap0 已建）")
     ap.add_argument("--tap", default="tap0", help="TAP 接口名（默认 tap0）")
-    ap.add_argument("--cpuid", action="store_true", help="灌入宿主 CPUID 表（剥离 SMAP/SMEP，默认关）")
+    ap.add_argument("--no-cpuid", action="store_true",
+                    help="不灌 CPUID 表（客户机写 EFER 会因缺 LM 特性被 KVM 判非法 → 三重故障）")
     ap.add_argument("--msr", action="store_true", help="启用 MSR 直通（默认关）")
     args = ap.parse_args()
 
@@ -474,7 +487,10 @@ def main():
     kernel = open(args.kernel, "rb").read()
     initrd = open(args.initrd, "rb").read()
     cmdline = ("console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 "
-               "rdinit=/init nokaslr " + args.append).encode()
+               "rdinit=/init nokaslr "
+               # lpj= 预设 BogoMIPS：ACPI 启用后 calibrate_delay 会死转（jiffies
+               # 相关，根因待查）；该值来自本 bzImage 历史 calibrate 输出
+               "lpj=14512128 " + args.append).encode()
     # 设备发现走 ACPI（DSDT 里描述 LNRO0005）；cmdline 注册方式该内核未编译
 
     kvm_fd = os.open("/dev/kvm", os.O_RDWR)
@@ -525,6 +541,97 @@ def main():
         return (pit2["count"] - gone) & 0xFFFF
 
     netdev = None
+
+    # ---- 虚拟 PCIe 设备：type1 PCI 总线（0xCF8/0xCFC）+ 两个设备 ----
+    #  00:00.0 宿主桥（4c4d:0001，class 06）
+    #  00:01.0 处理加速器（4c4d:4c4d，class 12，RCiEP，BAR0=4KB MMIO echo）
+    PCI_BAR_ADDR = 0xC0001000        # 固件预分配的 BAR 地址（RAM 之外 → MMIO 出口）
+
+    def _build_pci_cfg():
+        bridge = bytearray(256)
+        struct.pack_into("<HH", bridge, 0x00, 0x4C4D, 0x0001)
+        bridge[0x0B] = 0x06                      # class 06xxxx Host bridge
+        accel = bytearray(256)
+        struct.pack_into("<HH", accel, 0x00, 0x4C4D, 0x4C4D)
+        struct.pack_into("<H", accel, 0x06, 0x0010)  # status: capabilities list 存在
+        accel[0x0B] = 0x12                       # class 12xxxx Processing accelerator
+        accel[0x0E] = 0x00                       # header type 0（普通端点）
+        struct.pack_into("<I", accel, 0x10, PCI_BAR_ADDR)   # BAR0（预分配）
+        accel[0x34] = 0x40                       # capabilities pointer
+        accel[0x40] = 0x10                       # cap ID 0x10 = PCI Express
+        accel[0x41] = 0x00                       # next cap：无
+        accel[0x44] = 0x90                       # DevCap[7:4]=1001b → RCiEP
+        accel[0x3C] = 5                          # INT line（GSI 5，配合 _PRT）
+        accel[0x3D] = 1                          # INT pin：INTA#
+        return {0: bridge, 1: accel}
+
+    pci = {
+        "cf8": 0,
+        "sizing": False,          # BAR 大小探测：写全 1 → 读回尺寸掩码
+        "bar_addr": PCI_BAR_ADDR,
+        "bar_mem": bytearray(0x1000),
+        "devs": _build_pci_cfg(),
+    }
+    # ---- 加速卡寄存器布局（BAR 内偏移）----
+    #  0x000 MAGIC RO "LEMU"   0x004 VER RO   0x008 CAPS RO(bit0=SHA256)
+    #  0x010 CMD RW(1=SHA256)  0x014 LEN RW  0x018 STATUS RO(bit1=DONE)
+    #  0x01C CTRL WO(写1清DONE)  0x040 DOORBELL WO(任意写触发计算)
+    #  0x200..0x2FF 载入数据    0x300..0x31F SHA256 摘要
+    pci["bar_mem"][0:4] = b"LEMU"
+    struct.pack_into("<I", pci["bar_mem"], 0x004, 0x00010001)
+    struct.pack_into("<I", pci["bar_mem"], 0x008, 0x00000001)
+
+    def pci_doorbell():
+        """DOORBELL 被写：宿主当场替客户机算 SHA256（同步完成 -> STATUS=DONE）
+        真实设备这里会是异步线程 + 完成中断，同步版为了确定性先示人。"""
+        import hashlib
+        op = pci["bar_mem"][0x10]
+        ln = min(struct.unpack_from("<I", pci["bar_mem"], 0x14)[0], 256)
+        if op == 1:                                       # CMD=SHA256
+            dig = hashlib.sha256(bytes(pci["bar_mem"][0x200:0x200 + ln])).digest()
+            pci["bar_mem"][0x300:0x320] = dig
+        struct.pack_into("<I", pci["bar_mem"], 0x18, 0x2)  # STATUS = DONE
+
+    def pci_cfg_read_dword(dev, fn, off):
+        """配置空间读的核心：CF8 老路和 ECAM 新路共用"""
+        if fn != 0 or dev not in pci["devs"]:
+            return 0xFFFFFFFF
+        if dev == 1 and off == 0x10 and pci["sizing"]:
+            return 0xFFFFF000
+        return struct.unpack_from("<I", pci["devs"][dev], off)[0]
+
+    def pci_cfg_write_dword(dev, fn, off, val):
+        if fn != 0 or dev not in pci["devs"]:
+            return
+        if dev == 1 and off == 0x10:              # BAR0：跟随内核的重分配
+            if val == 0xFFFFFFFF:
+                pci["sizing"] = True
+            else:
+                pci["sizing"] = False
+                pci["bar_addr"] = val & 0xFFFFF000
+                struct.pack_into("<I", pci["devs"][1], 0x10, pci["bar_addr"])
+            return
+        if off == 0x04:                           # command 寄存器可写，其余只读
+            struct.pack_into("<H", pci["devs"][dev], 0x04, val & 0xFFFF)
+
+    def pci_cfg_read():
+        cf8 = pci["cf8"]
+        if not (cf8 & 0x80000000):
+            return 0xFFFFFFFF
+        bus, dev, fn = (cf8 >> 16) & 0xFF, (cf8 >> 11) & 0x1F, (cf8 >> 8) & 0x7
+        if bus != 0:
+            return 0xFFFFFFFF
+        return pci_cfg_read_dword(dev, fn, cf8 & 0xFC)
+
+    def pci_cfg_write(val):
+        cf8 = pci["cf8"]
+        if not (cf8 & 0x80000000):
+            return
+        bus, dev, fn = (cf8 >> 16) & 0xFF, (cf8 >> 11) & 0x1F, (cf8 >> 8) & 0x7
+        if bus != 0:
+            return
+        pci_cfg_write_dword(dev, fn, cf8 & 0xFC, val)
+
     if args.net:
         import virtio_net
         netdev = virtio_net.VirtioNetMmio(guest_mem, mem_size, args.tap)
@@ -535,9 +642,12 @@ def main():
             fcntl.ioctl(vm_fd, KVM_IRQ_LINE, vbuf, True)
 
         netdev.on_interrupt = virtio_irq
-        # ACPI：DSDT 描述 LNRO0005 设备（MMIO 0xC0000000/4K + IRQ5），内核 ACPI 枚举发现它
-        dsdt_bytes = open(os.path.join(ROOT_DIR, "guest", "acpi", "DSDT.aml"), "rb").read()
-        build_acpi(guest_mem, dsdt_bytes)
+
+    # ACPI：无条件构建——PCI0 根桥现在也住在 DSDT 里，不再只是 virtio-net 的户口
+    # （曾长期只在 --net 时构建，导致"没开 --net 的引导其实从未有过 ACPI"）
+    dsdt_path = os.path.join(ROOT_DIR, "guest", "acpi", "DSDT.aml")
+    if os.path.exists(dsdt_path):
+        build_acpi(guest_mem, open(dsdt_path, "rb").read())
         log(f"    virtio-net 已挂载 @ 0xC0000000（TAP: {args.tap}，MAC 52:54:00:4C:45:4D）")
 
     tsc_khz = host_tsc_khz()
@@ -546,8 +656,10 @@ def main():
 
     vcpu_fd = fcntl.ioctl(vm_fd, KVM_CREATE_VCPU, 0)
 
-    if args.cpuid:
+    if not args.no_cpuid:
         # ---- 精选白名单 CPUID（kvmtool 式）：只给内核必需的最小特性集 ----
+        # 必须灌：KVM 校验客户机写 EFER 时要查 guest_cpuid_has(X86_FEATURE_LM)，
+        # 空表 → 判非法 → 注入 #GP → 此时内核尚未装 IDT → 三重故障。
         # 不透传宿主全表：SMAP/SMEP/UMIP/PKU/OSPKE/uncore 等所有会与
         # 手写环境冲突的特性从源头不存在。叶 0x15/0x16 提供 TSC 频率。
         V = (0x756e6547, 0x6c65746e, 0x49656e69)          # "GenuineIntel"
@@ -557,13 +669,26 @@ def main():
             (0x1,        0,
              0x000806E9,                                   # Family6 Model142 (KBL)
              0x00000800,                                   # CLFLUSH=64B
-             0x40000001,                                   # SSE3 + RDRAND
+             0x7C401001,                                   # SSE3+FMA+MOVBE+XSAVE+
+                                                           # OSXSAVE+AVX+F16C+HV
+                                                           # （glibc 要 x86-64-v3 基线，
+                                                           #  报少了它拒载: ISA level too low）
              0x078BFBFF),                                  # FPU..SSE2, HTT 等
-            (0x7,        0, 0, 0, 0, 0),                  # 无扩展特性(无SMAP/SMEP/UMIP/PKU)
+            (0x7,        0, 0, 0x128, 0, 0),              # AVX2|BMI1|BMI2，其余不给
+            (0xD,        0, 0x7, 0x340, 0x340, 0),        # XSTATE: x87|SSE|AVX 可用
+            (0xD,        1, 0x1, 0x340, 0, 0),            #   只给 XSAVEOPT：宿主原值
+                                                          #   0xF 含 XSAVES/XSAVEC 位，
+                                                          #   内核会启用压缩格式，而我们
+                                                          #   没给压缩偏移表 → "XSAVE
+                                                          #   consistency problem"。
+                                                          #   值为宿主 cpuid_dump 实测。
+            (0xD,        2, 0x100, 0x240, 0, 0),          #   YMM: 256B @ offset 576
             (0x15,       0, 100, 2800, 100_000_000, 0),   # TSC = 100MHz*2800/100 = 2.8GHz
             (0x16,       0, 2800, 0, 0, 0),               # 基频 2800MHz
             (0x80000000, 0, 0x80000008, V[0], V[2], V[1]),
-            (0x80000001, 0, 0, 0, 0, (1 << 29) | (1 << 27) | (1 << 20)),  # LM|RDTSCP|NX
+            (0x80000001, 0, 0, 0, 0x20, (1 << 29) | (1 << 27) | (1 << 20)),
+            #            fn sub eax ebx ecx  edx
+            #            ECX: LZCNT(ABM); EDX: LM|RDTSCP|NX
             (0x80000007, 0, 0, 0, 0, 1 << 8),             # invariant TSC
             (0x80000008, 0, 0x30, 0, 0, 0),               # 物理 48 位
         ]
@@ -572,13 +697,16 @@ def main():
         struct.pack_into("<I", cpuid_buf, 0, MAX_CPUID)
         for i, (fn, sub, eax, ebx, ecx, edx) in enumerate(entries):
             e = 8 + i * 40
+            # KVM_CPUID_FLAG_SIGNIFCANT_INDEX：不带此标志 KVM 对任意 index
+            # 都命中该条目（0xD 的子叶会全被 0xD.0 顶掉，内核报 XSAVE 一致性错）
+            flags = 0x2 if fn == 0xD else 0
             struct.pack_into("<IIIIIIII", cpuid_buf, e,
-                             fn, sub, 0, eax, ebx, ecx, edx, 0)
+                             fn, sub, flags, eax, ebx, ecx, edx, 0)
         fcntl.ioctl(vcpu_fd, 0x4008AE90, cpuid_buf, True)   # KVM_SET_CPUID2
         log(f"    CPUID: 精选白名单 {MAX_CPUID} 条已灌入")
 
-    # CPUID 灌入已默认关闭：实测该内核不灌 CPUID 也能正常引导，
-    # 而灌入宿主 CPUID 表后 leaf 0x15 的值会触发内核 TSC 校准除零 oops。
+    # 注意：不能透传宿主全表——宿主 leaf 0x15 的值会触发内核 TSC 校准除零 oops，
+    # 上面白名单里 0x15/0x16 给的是自洽的 2.8GHz。
 
     kvm_run = mmap.mmap(vcpu_fd, fcntl.ioctl(kvm_fd, KVM_GET_VCPU_MMAP_SIZE, 0),
                         mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
@@ -640,12 +768,13 @@ def main():
             regs = ctypes.create_string_buffer(144)
             fcntl.ioctl(vcpu_fd, KVM_GET_REGS, regs, True)
             rip, rflags = struct.unpack_from("<QQ", regs, 128)
-            rax, rcx, rdx = struct.unpack_from("<3Q", regs, 0)
+            # kvm_regs 顺序：RAX RBX RCX RDX ——曾误把 RBX/RCX 打成 RCX/RDX
+            rax, rbx, rcx, rdx = struct.unpack_from("<4Q", regs, 0)
             sregs = ctypes.create_string_buffer(312)
             fcntl.ioctl(vcpu_fd, KVM_GET_SREGS, sregs, True)
             cr2, cr3 = struct.unpack_from("<QQ", sregs, 232)
             log(f"[{tag}] RIP=0x{rip:X} CR2=0x{cr2:X} CR3=0x{cr3:X}")
-            log(f"[{tag}] RAX=0x{rax:X} RCX=0x{rcx:X} RDX=0x{rdx:X}")
+            log(f"[{tag}] RAX=0x{rax:X} RBX=0x{rbx:X} RCX=0x{rcx:X} RDX=0x{rdx:X}")
 
             # ---- 取证 1：CR2 页表遍历 ----
             def walk(cr3, va):
@@ -694,6 +823,8 @@ def main():
                     f"top: {port_count.most_common(5)}")
             if args.max_seconds and time.monotonic() - start > args.max_seconds:
                 log(f"\n[lemu] 达到 --max-seconds={args.max_seconds}")
+                log(f"    [诊断] exits={total_exits} 端口TOP: {port_count.most_common(6)}")
+                log(f"    [诊断] pit2={pit2} pit0_programmed={pit0_programmed[0]}")
                 break
             if args.max_seconds:
                 signal_alarm(max(1, int(args.max_seconds - (time.monotonic() - start)) + 1))
@@ -702,14 +833,24 @@ def main():
             total_exits += 1
 
             if reason == KVM_EXIT_IO:
-                direction, _, port, _, doff = struct.unpack_from("<BBHIQ", kvm_run, OFF_IO)
+                direction, iosize, port, _, doff = struct.unpack_from("<BBHIQ", kvm_run, OFF_IO)
                 reason_count["IO"] += 1
                 port_count[f"0x{port:X}{'O' if direction else 'I'}"] += 1
                 # KVM_EXIT_IO_IN = 0, KVM_EXIT_IO_OUT = 1（内核头文件定义，之前写反了！）
                 if port == 0x61 and direction == 0:
                     # NMI/系统控制口：bit5 = PIT 通道2 输出（倒计时归零后=1）。
-                    # 内核 TSC 校准轮询它，必须动态反映到期状态
-                    kvm_run[doff] = 0x21 if (pit2["active"] and pit2["expired"]) else 0x01
+                    # 内核 TSC 校准只轮询这个口、不读 0x42，所以必须在这里
+                    # 主动推进计数（调 pit2_remaining 顺带更新 expired），
+                    # 否则 expired 永远为假 → 客户机死等（曾轮询 48.9 万次）
+                    if pit2["active"]:
+                        pit2_remaining()            # 顺带推进 expired
+                        bit5 = 0x20 if pit2["expired"] else 0x00
+                    else:
+                        # 通道 2 从未被编程（实测内核走的就是这条路：从不写 0x43/0x42）。
+                        # 恒返回"已到期"是 2026-09-19 那次成功引导到 shell 的行为；
+                        # 后来改成动态推进反而让内核死等 40 万次。
+                        bit5 = 0x20
+                    kvm_run[doff] = 0x01 | bit5
                     continue
                 if port == 0x42:
                     if direction == 1:                  # OUT：装载计数（先 LSB 后 MSB）
@@ -732,6 +873,27 @@ def main():
                     continue
                 if port == 0x40 and direction == 0:     # 通道 0 计数读：返回递减值近似
                     kvm_run[doff] = 0
+                    continue
+                # ---- PCI 配置空间（type1：0xCF8 地址口 + 0xCFC~0xCFF 数据口）----
+                if port == 0xCF8 and direction == 1:
+                    pci["cf8"] = int.from_bytes(bytes(kvm_run[doff:doff + iosize]), "little")
+                    continue
+                if port == 0xCF8 and direction == 0:
+                    kvm_run[doff:doff + iosize] = (pci["cf8"] & ((1 << (iosize * 8)) - 1)) \
+                        .to_bytes(iosize, "little")
+                    continue
+                if 0xCFC <= port <= 0xCFF:
+                    # 子 dword 访问：偏移进低两位 + 端口号决定字节位置
+                    shift = (port - 0xCFC) * 8
+                    mask = (1 << (iosize * 8)) - 1
+                    if direction == 1:                       # OUT：写配置空间
+                        val = int.from_bytes(bytes(kvm_run[doff:doff + iosize]), "little") << shift
+                        cur = pci_cfg_read() & 0xFFFFFFFF
+                        merged = (cur & ~(mask << shift) | (val & (mask << shift))) & 0xFFFFFFFF
+                        pci_cfg_write(merged)
+                    else:                                    # IN：读配置空间
+                        chunk = (pci_cfg_read() >> shift) & mask
+                        kvm_run[doff:doff + iosize] = chunk.to_bytes(iosize, "little")
                     continue
                 if 0x3F8 <= port <= 0x3FF:
                     off = port - 0x3F8
@@ -781,15 +943,52 @@ def main():
                 data = bytes(kvm_run[OFF_IO + 8:OFF_IO + 16])
                 length = struct.unpack_from("<I", kvm_run, OFF_IO + 16)[0]
                 is_write = kvm_run[OFF_IO + 20]
-                if netdev and 0xC0000000 <= addr < 0xC0000000 + 0x1000:
-                    off = addr - 0xC0000000
-                    if is_write:
-                        val = int.from_bytes(data[:length], "little")
-                        netdev.mmio_write(off, val)
+                if 0xC0000000 <= addr < 0xC0000000 + 0x1000:
+                    if netdev:
+                        off = addr - 0xC0000000
+                        if is_write:
+                            val = int.from_bytes(data[:length], "little")
+                            netdev.mmio_write(off, val)
+                        else:
+                            val = netdev.mmio_read(off)
+                            kvm_run[OFF_IO + 8:OFF_IO + 8 + length] = \
+                                val.to_bytes(length, "little")
+                    elif not is_write:
+                        # 设备缺席：读全 1（内核 virtio-mmio 探测会安静失败）
+                        kvm_run[OFF_IO + 8:OFF_IO + 8 + length] = b"\xff" * length
+                elif PCI_ECAM_BASE <= addr < PCI_ECAM_BASE + 0x100000:
+                    # ---- ECAM（MCFG 声明的现代配置空间）----
+                    # 地址自解释: [bus<<20 | dev<<15 | fn<<12 | 偏移]，无需 CF8 两步走
+                    eco = addr - PCI_ECAM_BASE
+                    ebus, edev, efn = (eco >> 20) & 0xFF, (eco >> 15) & 0x1F, (eco >> 12) & 0x7
+                    ereg = eco & 0xFFC                       # dword 对齐
+                    sub = addr & 3                           # dword 内字节偏移
+                    mask = (1 << (length * 8)) - 1
+                    if ebus != 0:                            # 只实现了 bus 0
+                        if not is_write:
+                            kvm_run[OFF_IO + 8:OFF_IO + 8 + length] = b"\xff" * length
+                    elif is_write:
+                        val_in = int.from_bytes(data[:length], "little") << (sub * 8)
+                        cur = pci_cfg_read_dword(edev, efn, ereg)
+                        merged = (cur & ~(mask << (sub * 8))
+                                  | (val_in & (mask << (sub * 8)))) & 0xFFFFFFFF
+                        pci_cfg_write_dword(edev, efn, ereg, merged)
                     else:
-                        val = netdev.mmio_read(off)
+                        val = (pci_cfg_read_dword(edev, efn, ereg) >> (sub * 8)) & mask
                         kvm_run[OFF_IO + 8:OFF_IO + 8 + length] = \
                             val.to_bytes(length, "little")
+                elif pci["bar_addr"] <= addr < pci["bar_addr"] + 0x1000:
+                    # ---- 加速卡 BAR0：寄存器 + 数据面 ----
+                    off2 = addr - pci["bar_addr"]
+                    if is_write:
+                        pci["bar_mem"][off2:off2 + length] = data[:length]
+                        if off2 <= 0x40 < off2 + length:     # DOORBELL：触发计算
+                            pci_doorbell()
+                        if off2 <= 0x1C < off2 + length:     # CTRL：清 DONE
+                            struct.pack_into("<I", pci["bar_mem"], 0x18, 0)
+                    else:
+                        kvm_run[OFF_IO + 8:OFF_IO + 8 + length] = \
+                            pci["bar_mem"][off2:off2 + length]
                 else:
                     log(f"\n[lemu] 未处理的 MMIO @ 0x{addr:X} write={is_write}")
             elif args.trace and reason != KVM_EXIT_INTR:

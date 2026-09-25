@@ -1,0 +1,13 @@
+[*] 布置引导状态...
+    xloadflags=0x003B  64位入口: 是
+    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
+Traceback (most recent call last):
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 1020, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 647, in main
+    build_acpi(guest_mem, open(dsdt_path, "rb").read())
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 406, in build_acpi
+    struct.pack_into("<HBBI", mcfg, 44, 0, 0, 0)                 # seg 0, bus 0-0
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+struct.error: pack_into expected 4 items for packing (got 3)

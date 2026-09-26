@@ -1,0 +1,13 @@
+[*] 布置引导状态...
+    ACPI: RSDP@0xF0000 XSDT@0xF1000 FACP@0xF2000 DSDT(169B)@0xF4000 MCFG@0xF6000
+Traceback (most recent call last):
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 1146, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 641, in main
+    efi_tables = build_efi(efi_fw, ACPI_RSDP_ADDR) if (args.efi and efi_fw) else None
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 537, in build_efi
+    mm += struct.pack("<II4xQQQ4x", t, 0, a, a, (b - a) >> 12, attr)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+struct.error: pack expected 5 items for packing (got 6)

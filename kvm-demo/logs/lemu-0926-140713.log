@@ -1,11 +1,3 @@
-[*] 布置引导状态...
-    xloadflags=0x003B  64位入口: 是
-    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
-    ACPI: RSDP@0xF0000 XSDT@0xF1000 FACP@0xF2000 DSDT(169B)@0xF4000 MCFG@0xF6000
-    virtio-net 已挂载 @ 0xC0000000（TAP: tap0，MAC 52:54:00:4C:45:4D）
-    CPUID: 精选白名单 12 条已灌入
-[*] 点火！客户机输出如下：
-------------------------------------------------------------
 
 
 KASLR disabled: 'nokaslr' on cmdline.
@@ -306,54 +298,102 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] io scheduler kyber registered
 [    0.000000] ioatdma: Intel(R) QuickData Technology Driver 5.00
 [    0.000000] Serial: 8250/16550 driver, 8 ports, IRQ sharing enabled
-[    0.000000] overflow: 0000 [#1] PREEMPT SMP PTI
-[    0.000000] CPU: 0 PID: 1 Comm: swapper/0 Tainted: G        W          6.6.114.1-microsoft-standard-WSL2 #1
-[    0.000000] RIP: 0010:_raw_spin_unlock_irqrestore+0x21/0x40
-[    0.000000] Code: 90 90 90 90 90 90 90 90 90 f3 0f 1e fa 0f 1f 44 00 00 55 48 89 e5 c6 07 00 0f 1f 00 f7 c6 00 02 00 00 74 06 fb 0f 1f 44 00 00 <65> ff 0d 00 52 fb 7d 74 06 5d c3 cc cc cc cc 0f 1f 44 00 00 5d c3
-[    0.000000] RSP: 0000:ffffc9000000fcb0 EFLAGS: 00000206
-[    0.000000] RAX: 0000000000000000 RBX: ffffffff83c41ca0 RCX: 0000000000000000
-[    0.000000] RDX: 00000000000003f9 RSI: 0000000000000202 RDI: ffffffff83c41ca0
-[    0.000000] RBP: ffffc9000000fcb0 R08: ffffffff8323dc50 R09: 0000000000000000
-[    0.000000] R10: ffff888000edb480 R11: ffff888000edb480 R12: 0000000000000001
-[    0.000000] R13: 0000000000000001 R14: 0000000000000202 R15: 0000000000000100
-[    0.000000] FS:  0000000000000000(0000) GS:ffff88801ea00000(0000) knlGS:0000000000000000
-[    0.000000] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[    0.000000] CR2: ffff888004000000 CR3: 0000000003232000 CR4: 00000000000006b0
+[    0.000000] serial8250: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+[    0.000000] Linux agpgart interface v0.103
+[    0.000000] AMD-Vi: AMD IOMMUv2 functionality not available on this system - This is not a bug.
+[    0.000000] ACPI: bus type drm_connector registered
+[    0.000000] brd: module loaded
+[    0.000000] loop: module loaded
+[    0.000000] Loading iSCSI transport class v2.0-870.
+[    0.000000] rdac: device handler registered
+[    0.000000] Microchip SmartPQI Driver (v2.1.24-046)
+[    0.000000] VMware PVSCSI driver - version 1.0.7.0-k
+[    0.000000] hv_vmbus: registering driver hv_storvsc
+[    0.000000] PPP generic driver version 2.4.2
+[    0.000000] VMware vmxnet3 virtual NIC driver - version 1.7.0.0-k-NAPI
+[    0.000000] hv_vmbus: registering driver hv_netvsc
+[    0.000000] Fusion MPT base driver 3.04.20
+[    0.000000] Copyright (c) 1999-2008 LSI Corporation
+[    0.000000] Fusion MPT SPI Host driver 3.04.20
+[    0.000000] Fusion MPT SAS Host driver 3.04.20
+[    0.000000] Fusion MPT misc device (ioctl) driver 3.04.20
+[    0.000000] mptctl: Registered with Fusion MPT base driver
+[    0.000000] mptctl: /dev/mptctl @ (major,minor=10,220)
+[    0.000000] i8042: PNP: No PS/2 controller found.
+[    0.000000] hv_vmbus: registering driver hyperv_keyboard
+[    0.000000] rtc_cmos rtc_cmos: only 24-hr supported
+[    0.000000] device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.
+[    0.000000] device-mapper: uevent: version 1.0.3
+[    0.000000] device-mapper: ioctl: 4.48.0-ioctl (2023-03-01) initialised: dm-devel@redhat.com
+[    0.000000] hv_utils: Registering HyperV Utility Driver
+[    0.000000] hv_vmbus: registering driver hv_utils
+[    0.000000] hv_vmbus: registering driver hv_balloon
+[    0.000000] hv_vmbus: registering driver dxgkrnl
+[    0.000000] misc dxg: dxgk: dxg_drv_init: vmbus_driver_register failed: -19
+[    0.000000] drop_monitor: Initializing network drop monitor service
+[    0.000000] NET: Registered PF_INET6 protocol family
+[    0.000000] Segment Routing with IPv6
+[    0.000000] In-situ OAM (IOAM) with IPv6
+[    0.000000] NET: Registered PF_PACKET protocol family
+[    0.000000] 9pnet: Installing 9P2000 support
+[    0.000000] NET: Registered PF_VSOCK protocol family
+[    0.000000] mce: Unable to init MCE device (rc: -5)
+[    0.000000] microcode: no support for this CPU vendor
+[    0.000000] IPI shorthand broadcast: enabled
+[    0.000000] registered taskstats version 1
+[    0.000000] Loading compiled-in X.509 certificates
+[    0.000000] ima: No TPM chip found, activating TPM-bypass!
+[    0.000000] ima: Allocated hash algorithm: sha256
+[    0.000000] ima: No architecture policies found
+[    0.000000] RAS: Correctable Errors collector initialized.
+[    0.000000] Unstable clock detected, switching default tracing clock to "global"
+[    0.000000] If you want to keep using the local clock, then add:
+[    0.000000]   "trace_clock=local"
+[    0.000000] on the kernel command line
+[    0.000000] clk: Disabling unused clocks
+[    0.000000] Freeing unused decrypted memory: 2028K
+[    0.000000] Freeing unused kernel image (initmem) memory: 4480K
+[    0.000000] Write protecting the kernel read-only data: 34816k
+[    0.000000] Freeing unused kernel image (rodata/data gap) memory: 740K
+[    0.000000] Run /init as init process
+[    0.000000] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000000
+[    0.000000] CPU: 0 PID: 1 Comm: sh Tainted: G        W          6.6.114.1-microsoft-standard-WSL2 #1
 [    0.000000] Call Trace:
 [    0.000000]  <TASK>
-[    0.000000]  serial8250_config_port+0x4d0/0x1050
-[    0.000000]  ? kasprintf+0x52/0x70
-[    0.000000]  univ8250_config_port+0xbb/0x140
-[    0.000000]  serial_core_register_port+0x2e9/0x810
-[    0.000000]  serial_ctrl_register_port+0x12/0x20
-[    0.000000]  uart_add_one_port+0x12/0x20
-[    0.000000]  serial8250_init+0x154/0x1f0
-[    0.000000]  ? __pfx_serial8250_init+0x10/0x10
-[    0.000000]  do_one_initcall+0x4e/0x330
-[    0.000000]  kernel_init_freeable+0x31e/0x470
-[    0.000000]  ? __pfx_kernel_init+0x10/0x10
-[    0.000000]  kernel_init+0x1e/0x1c0
-[    0.000000]  ret_from_fork+0x41/0x60
-[    0.000000]  ? __pfx_kernel_init+0x10/0x10
-[    0.000000]  ret_from_fork_asm+0x1b/0x30
+[    0.000000]  dump_stack_lvl+0x4c/0x70
+[    0.000000]  dump_stack+0x14/0x20
+[    0.000000]  panic+0x179/0x330
+[    0.000000]  do_exit+0x9ac/0xb30
+[    0.000000]  do_group_exit+0x39/0x90
+[    0.000000]  __x64_sys_exit_group+0x1c/0x20
+[    0.000000]  x64_sys_call+0x183b/0x1c90
+[    0.000000]  do_syscall_64+0x5a/0xb0
+[    0.000000]  ? syscall_exit_to_user_mode+0x2f/0x50
+[    0.000000]  ? x64_sys_call+0x15d3/0x1c90
+[    0.000000]  ? do_syscall_64+0x66/0xb0
+[    0.000000]  ? syscall_exit_to_user_mode+0x2f/0x50
+[    0.000000]  ? x64_sys_call+0x1c50/0x1c90
+[    0.000000]  ? do_syscall_64+0x66/0xb0
+[    0.000000]  ? __mod_lruvec_page_state+0xa3/0x150
+[    0.000000]  ? folio_add_new_anon_rmap+0x4a/0xe0
+[    0.000000]  ? set_ptes.isra.0+0x17/0x90
+[    0.000000]  ? do_anonymous_page+0x2fd/0x3b0
+[    0.000000]  ? __handle_mm_fault+0x839/0x860
+[    0.000000]  ? __count_memcg_events+0x49/0xa0
+[    0.000000]  ? count_memcg_events.constprop.0+0x1e/0x40
+[    0.000000]  ? handle_mm_fault+0xb1/0x310
+[    0.000000]  ? do_user_addr_fault+0x32d/0x610
+[    0.000000]  ? irqentry_exit_to_user_mode+0x12/0x20
+[    0.000000]  ? irqentry_exit+0x3f/0x50
+[    0.000000]  ? exc_page_fault+0x87/0x160
+[    0.000000]  entry_SYSCALL_64_after_hwframe+0x78/0xe2
+[    0.000000] RIP: 0033:0x709028018bce
+[    0.000000] Code: 8b 76 28 48 89 c7 e9 45 42 00 00 64 48 8b 04 25 00 00 00 00 48 8b b0 a8 00 00 00 e9 bf ff ff ff 48 63 ff b8 e7 00 00 00 0f 05 <ba> 3c 00 00 00 48 89 d0 0f 05 eb f9 48 83 ec 38 bf 06 00 00 00 e8
+[    0.000000] RSP: 002b:00007ffe74f46398 EFLAGS: 00000206 ORIG_RAX: 00000000000000e7
+[    0.000000] RAX: ffffffffffffffda RBX: 0000709027fe7050 RCX: 0000709028018bce
+[    0.000000] RDX: 000070902809e880 RSI: 0000000000000000 RDI: 0000000000000000
+[    0.000000] RBP: 00005b1f72491adc R08: 000070902809bac0 R09: 0000000000000002
+[    0.000000] R10: 0000000000000001 R11: 0000000000000206 R12: 00007ffe74f46670
+[    0.000000] R13: 00007ffe74f46678 R14: 0000000000000000 R15: 00007ffe74f46660
 [    0.000000]  </TASK>
-[    0.000000] Modules linked in:
-[    0.000000] ---[ end trace 0000000000000000 ]---
-[    0.000000] RIP: 0010:_raw_spin_unlock_irqrestore+0x21/0x40
-[    0.000000] Code: 90 90 90 90 90 90 90 90 90 f3 0f 1e fa 0f 1f 44 00 00 55 48 89 e5 c6 07 00 0f 1f 00 f7 c6 00 02 00 00 74 06 fb 0f 1f 44 00 00 <65> ff 0d 00 52 fb 7d 74 06 5d c3 cc cc cc cc 0f 1f 44 00 00 5d c3
-[    0.000000] RSP: 0000:ffffc9000000fcb0 EFLAGS: 00000206
-[    0.000000] RAX: 0000000000000000 RBX: ffffffff83c41ca0 RCX: 0000000000000000
-[    0.000000] RDX: 00000000000003f9 RSI: 0000000000000202 RDI: ffffffff83c41ca0
-[    0.000000] RBP: ffffc9000000fcb0 R08: ffffffff8323dc50 R09: 0000000000000000
-[    0.000000] R10: ffff888000edb480 R11: ffff888000edb480 R12: 0000000000000001
-[    0.000000] R13: 0000000000000001 R14: 0000000000000202 R15: 0000000000000100
-[    0.000000] FS:  0000000000000000(0000) GS:ffff88801ea00000(0000) knlGS:0000000000000000
-[    0.000000] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[    0.000000] CR2: ffff888004000000 CR3: 0000000003232000 CR4: 00000000000006b0
-[    0.000000] Kernel panic - not syncing: Fatal exception
 [    0.000000] Kernel Offset: disabled
-
-[lemu] 超时/客户机停摆 —— 转储现场：
-[timeout] RIP=0x1417 CR2=0xFFFF888004000000 CR3=0x0
-[timeout] RAX=0xED RBX=0x803E RCX=0x4600 RDX=0x60000091
-[lemu] 会话日志: /mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/logs/lemu-0926-140152.log

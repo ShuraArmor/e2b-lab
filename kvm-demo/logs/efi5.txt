@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 1168, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 628, in main
+    fcntl.ioctl(vm_fd, 0x4208AE63, ic, True)   # KVM_SET_IRQCHIP
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 25] Inappropriate ioctl for device

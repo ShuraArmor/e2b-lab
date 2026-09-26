@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 1146, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/vmm/lemu.py", line 633, in main
+    fcntl.ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, fbuf, True)
+FileExistsError: [Errno 17] File exists

@@ -117,7 +117,7 @@ def build_identity_pagetable(guest_mem, mem_size):
     guest_mem[PD_ADDR:PD_ADDR + 4096] = pd
 
 
-def build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd):
+def build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd, efi=None):
     if kernel[0x202:0x206] != b"HdrS":
         sys.exit("不是有效的 bzImage（缺少 HdrS 魔数）")
 
@@ -136,7 +136,9 @@ def build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd):
     else:
         entry = code32_start
 
-    initrd_addr = (mem_size - len(initrd)) & ~0xFFF
+    # initrd 紧贴 RAM 顶端布置时，尾部会越过 0x20000000 落进 MMIO 空洞
+    # （未注册→读出垃圾）。留 1MB 边距保证整个 initrd 在真实 RAM 内。
+    initrd_addr = (mem_size - len(initrd) - 0x100000) & ~0xFFF
     guest_mem[initrd_addr: initrd_addr + len(initrd)] = initrd
     guest_mem[CMDLINE_ADDR: CMDLINE_ADDR + len(cmdline)] = cmdline
 
@@ -154,6 +156,13 @@ def build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd):
     zp[0x1E8] = len(e820)
     for i, (base, size, typ) in enumerate(e820):
         struct.pack_into("<QQI", zp, 0x2D0 + 20 * i, base, size, typ)
+    # EFI 交接态契约：内核 efi_init 看到 "EL64" 就走 EFI 路径
+    # （e820 补充 EFI 条目、RSDP 改信配置表、运行时服务落进我们的桩）
+    if efi:
+        systab, mm_size, mm_addr = efi
+        zp[0x1C4:0x1C8] = b"EL64"                        # efi_loader_signature
+        struct.pack_into("<IIIII", zp, 0x1C8, systab, mm_size, mm_addr, 0, 0)
+        log(f"    EFI: systab@0x{systab:X} memmap@0x{mm_addr:X}({mm_size}B) 签名 EL64")
     guest_mem[ZP_ADDR:ZP_ADDR + 4096] = zp
 
     # 64 位 GDT：null / 0x08 data(64) / 0x10 code(64)
@@ -217,6 +226,8 @@ def setup_cpu(vcpu_fd, entry_addr, long_mode=False):
 # ================= 16550 UART =================
 
 class Uart:
+    # COM1 的 IRQ4 在 IOAPIC 模式下走 GSI4（无 ISO 重定向，与 PIC 线号同号）；
+    # 但 PIC 被内核屏蔽后，只有打到 IOAPIC 引脚上的 KVM_IRQ_LINE 才会被消费。
     def __init__(self, vm_fd, guest_out):
         self.vm_fd = vm_fd
         self.guest_out = guest_out
@@ -235,10 +246,22 @@ class Uart:
         self.tx_int_pending = False    # 发送器空中断挂起（tty 用户态输出依赖它！）
 
     def _irq(self, level):
+        # 实验开关：LEMU_NO_UART_IRQ=1 静音 IRQ4（排查工具，见记忆）
+        if os.environ.get("LEMU_NO_UART_IRQ") == "1":
+            return
         if level != self.irq_level:
             self.irq_level = level
             buf = ctypes.create_string_buffer(8)
             struct.pack_into("<II", buf, 0, 4, level)
+            fcntl.ioctl(self.vm_fd, KVM_IRQ_LINE, buf, True)
+        elif level:
+            # IOAPIC 电平触发路径：同一电平重复声明才能让 KVM 重新评估注入。
+            # 否则 tty 的 TX 空中断只来一次，用户态 write() 之后永远等不到下一次，
+            # 内核 printk（轮询式直写）不受影响——正是"内核日志有、用户态无输出"的成因。
+            buf = ctypes.create_string_buffer(8)
+            struct.pack_into("<II", buf, 0, 4, 0)
+            fcntl.ioctl(self.vm_fd, KVM_IRQ_LINE, buf, True)
+            struct.pack_into("<II", buf, 0, 4, 1)
             fcntl.ioctl(self.vm_fd, KVM_IRQ_LINE, buf, True)
 
     def _update_irq(self):
@@ -354,7 +377,17 @@ ACPI_XSDT_ADDR = 0xF1000
 ACPI_FACP_ADDR = 0xF2000
 ACPI_DSDT_ADDR = 0xF4000
 ACPI_MCFG_ADDR = 0xF6000    # MCFG：ECAM 声明（PCIe 现代配置空间）
+ACPI_MADT_ADDR = 0xF8000    # MADT：LAPIC/IO-APIC 拓扑（没有它内核走"无配置"回退，
+                            #  不编程 PIC → 中断向量基址为 0 → #OF oops）
 PCI_ECAM_BASE = 0xE0000000  # ECAM 窗口：bus0 一共 1MB（32设备×8功能×4KB），RAM 之外
+
+# ---- EFI 交接态伪装（--efi）：固件区=独立 memslot，内核经 EPT 直读直执行 ----
+EFI_FW_ADDR = 0xE1000000    # 固件区基址（ECAM 之上，避开其 1MB 窗口）
+EFI_FW_SIZE = 0x400000      # 4MB
+EFI_STUB_ADDR = 0xE1000000  # runtime services 桩（RUNTIME_CODE，内核 1:1 映射后调用）
+EFI_MEMMAP_ADDR = 0xE1001000
+EFI_SYSTAB_ADDR = 0xE1004000
+EFI_DESC_SIZE = 48
 
 
 def _table_checksum(tbl: bytearray):
@@ -376,7 +409,7 @@ def _table_header(sig, length, oem_table_id=b"LEMUVM01", rev=1):
 
 
 def build_acpi(guest_mem, dsdt_bytes):
-    """布置 RSDP/XSDT/FACP/DSDT，全部落在 E820 保留区 [0x9F000, 0x100000)。"""
+    """布置 RSDP/XSDT/FACP/DSDT/MCFG/MADT，全部落在 E820 保留区 [0x9F000, 0x100000)。"""
     dsdt_len = len(dsdt_bytes)
     # ---- DSDT（compiled AML）----
     dsdt = bytearray(dsdt_bytes)
@@ -403,14 +436,32 @@ def build_acpi(guest_mem, dsdt_bytes):
     # 布局：36B 标准头 + 8B 保留 + 每条目 16B（基址u64, segment u16, 起止bus u8×2, 保留u32）
     mcfg = _table_header(b"MCFG", 60, rev=1)
     struct.pack_into("<Q", mcfg, 36, PCI_ECAM_BASE)
-    struct.pack_into("<HBBI", mcfg, 44, 0, 0, 0, 0)              # seg 0, bus 0-0, 保留
+    struct.pack_into("<HBBI", mcfg, 44, 0, 0, 0, 0)          # seg 0, bus 0-0, 保留
     _table_checksum(mcfg)
     guest_mem[ACPI_MCFG_ADDR:ACPI_MCFG_ADDR + len(mcfg)] = mcfg
 
-    # ---- XSDT（指向 FACP / DSDT / MCFG）----
-    xsdt = _table_header(b"XSDT", 36 + 24, rev=1)
-    struct.pack_into("<QQQ", xsdt, 36, ACPI_FACP_ADDR, ACPI_DSDT_ADDR,
-                     ACPI_MCFG_ADDR)
+    # ---- MADT：LAPIC + IO-APIC 拓扑 ----
+    # 没有 MADT：内核 "Switch to virtual wire mode setup with no configuration"，
+    # 不编程 8259（认定固件已做，而真实固件确实做了）→ PIC 向量基址=0 →
+    # 设备中断以向量 N 直达 → #OF("overflow") oops。IOAPIC 的 MMIO(0xFEC00000)
+    # 由 KVM 内核态直接应答，无需用户态出口。
+    # ISO（Interrupt Source Override）：PC 接线约定 IRQ0→GSI2、IRQ8→GSI8。
+    # 没有它，内核把 timer 挂在 GSI0 上，而我们的 ticker 脉冲打 GSI2 → tick 永不到达。
+    madt = _table_header(b"APIC", 84, rev=1)
+    struct.pack_into("<I", madt, 36, 0xFEE00000)                 # local APIC MMIO
+    struct.pack_into("<I", madt, 40, 1)                          # flags: PCAT_COMPAT
+    madt[44:52] = struct.pack("<BBBBI", 0, 8, 0, 0, 1)            # LAPIC: type0 len8 proc0 apic0 enabled
+    madt[52:64] = struct.pack("<BBBBII", 1, 12, 1, 0, 0xFEC00000, 0)
+    # IOAPIC: type1 len12 id1 rsv @FEC00000 GSI0
+    madt[64:74] = struct.pack("<BBBBIH", 2, 10, 0, 0, 2, 0)       # ISO: IRQ0 → GSI2 (edge/hi)
+    madt[74:84] = struct.pack("<BBBBIH", 2, 10, 0, 8, 8, 0)       # ISO: IRQ8 → GSI8
+    _table_checksum(madt)
+    guest_mem[ACPI_MADT_ADDR:ACPI_MADT_ADDR + len(madt)] = madt
+
+    # ---- XSDT（指向 FACP / DSDT / MCFG / MADT）----
+    xsdt = _table_header(b"XSDT", 36 + 32, rev=1)
+    struct.pack_into("<QQQQ", xsdt, 36, ACPI_FACP_ADDR, ACPI_DSDT_ADDR,
+                     ACPI_MCFG_ADDR, ACPI_MADT_ADDR)
     _table_checksum(xsdt)
     guest_mem[ACPI_XSDT_ADDR:ACPI_XSDT_ADDR + len(xsdt)] = xsdt
 
@@ -430,6 +481,87 @@ def build_acpi(guest_mem, dsdt_bytes):
     log(f"    ACPI: RSDP@0x{ACPI_RSDP_ADDR:X} XSDT@0x{ACPI_XSDT_ADDR:X} "
         f"FACP@0x{ACPI_FACP_ADDR:X} DSDT({dsdt_len}B)@0x{ACPI_DSDT_ADDR:X} "
         f"MCFG@0x{ACPI_MCFG_ADDR:X}")
+
+
+def build_efi(fw, rsdp_addr):
+    """在固件区布置"ExitBootServices 刚返回的瞬间"：
+    运行时桩 + RT/BS/ES 表 + 配置表（ACPI20 GUID→RSDP）+ EFI memory map。
+    内核经 efi_info 走 efi_init 路径，无法分辨固件是真跑过还是被填出来的。"""
+    import zlib
+
+    def hdr(sig, size, rev):
+        t = bytearray(size)
+        struct.pack_into("<Q", t, 0, sig)
+        struct.pack_into("<IIII", t, 8, rev, size, 0, 0)
+        return t
+
+    def fix_crc(t):
+        struct.pack_into("<I", t, 16, 0)
+        struct.pack_into("<I", t, 16, zlib.crc32(bytes(t)) & 0xFFFFFFFF)
+
+    UNSUP = b"\xB8\x0E\x00\x00\x80\xC3"   # mov eax,0x8000000E; ret → EFI_UNSUPPORTED
+    OK = b"\x31\xC0\xC3"                  # xor eax,eax; ret      → EFI_SUCCESS
+    fw[0:6] = UNSUP
+    fw[8:11] = OK
+
+    # ---- Runtime Services：SetVirtualAddressMap(第5个指针)→SUCCESS，其余→UNSUPPORTED
+    rt = hdr(0x56524553544E5552, 136, 0x0002000A)          # "RUNTSERV" rev 2.10
+    for i in range(14):
+        struct.pack_into("<Q", rt, 24 + i * 8,
+                         EFI_STUB_ADDR + 8 if i == 4 else EFI_STUB_ADDR)
+    fix_crc(rt)
+    fw[0x1000:0x1000 + len(rt)] = rt
+    RT_ADDR = EFI_FW_ADDR + 0x1000
+
+    # ---- Boot Services：占位表（直接 64 位入口交接时内核不再调用）----
+    bs = hdr(0x56524553544F4F42, 328, 0x0002000A)          # "BOOTSERV"
+    for i in range(38):
+        struct.pack_into("<Q", bs, 24 + i * 8, EFI_STUB_ADDR)
+    fix_crc(bs)
+    fw[0x2000:0x2000 + len(bs)] = bs
+    BS_ADDR = EFI_FW_ADDR + 0x2000
+
+    # ---- 配置表：ACPI 2.0 GUID → RSDP（内核从此不扫内存找 RSDP）----
+    GUID_ACPI20 = bytes.fromhex("71886888e4f1d311bc220080c73c8881")
+    fw[0x3000:0x3010] = GUID_ACPI20
+    struct.pack_into("<Q", fw, 0x3010, rsdp_addr)
+    CFG_ADDR = EFI_FW_ADDR + 0x3000
+
+    # ---- fw_vendor：UTF-16LE，内核会打印 "EFI v2.10 by LEMU EFI" ----
+    v = "LEMU EFI".encode("utf-16-le") + b"\x00\x00"
+    fw[0x3100:0x3100 + len(v)] = v
+    V_ADDR = EFI_FW_ADDR + 0x3100
+
+    # ---- EFI System Table ----
+    es = hdr(0x5453595320494249, 120, 0x00020000)          # "IBI SYST" rev 2.0
+    struct.pack_into("<Q", es, 24, V_ADDR)                 # fw_vendor
+    struct.pack_into("<I", es, 32, 0x0002000A)             # fw_revision 2.10
+    struct.pack_into("<Q", es, 88, RT_ADDR)                # runtime services
+    struct.pack_into("<Q", es, 96, BS_ADDR)                # boot services
+    struct.pack_into("<Q", es, 104, 1)                     # nr_tables
+    struct.pack_into("<Q", es, 112, CFG_ADDR)              # config tables
+    fix_crc(es)
+    fw[0x4000:0x4000 + len(es)] = es
+
+    # ---- EFI memory map（每项 48B；类型: 4=BootData 5=RuntimeCode 7=Conv 9=AcpiReclaim 11=MMIO）----
+    RUNTIME = 0x8000000000000000
+    WB = 0x4
+    descs = [
+        (7, 0x00000000, 0x0009F000, WB),                   # 传统低段
+        (0, 0x0009F000, 0x000F0000, 0),                    # 保留
+        (9, 0x000F0000, 0x00100000, WB),                   # ACPI 表区 → ACPI Reclaim
+        (7, 0x00100000, 0x20000000, WB),                   # 主 RAM
+        (11, 0xC0001000, 0xC0010000, 0),                   # PCIe BAR 窗口
+        (0, 0xC0010000, 0xE0000000, 0),                    # 空洞
+        (11, 0xE0000000, 0xE0100000, 0),                   # ECAM
+        (5, 0xE1000000, 0xE1001000, RUNTIME | WB),         # runtime 桩
+        (4, 0xE1001000, EFI_FW_ADDR + EFI_FW_SIZE, WB),    # 固件表区
+    ]
+    mm = bytearray()
+    for t, a, b, attr in descs:
+        mm += struct.pack("<IIQQQQ", t, 0, a, a, (b - a) >> 12, attr) + b"\x00" * 8
+    fw[EFI_MEMMAP_ADDR - EFI_FW_ADDR: EFI_MEMMAP_ADDR - EFI_FW_ADDR + len(mm)] = mm
+    return EFI_SYSTAB_ADDR, len(mm), EFI_MEMMAP_ADDR
 
 
 def setup_msr_passthrough(vm_fd, kvm_fd):
@@ -478,6 +610,14 @@ def main():
     ap.add_argument("--no-cpuid", action="store_true",
                     help="不灌 CPUID 表（客户机写 EFER 会因缺 LM 特性被 KVM 判非法 → 三重故障）")
     ap.add_argument("--msr", action="store_true", help="启用 MSR 直通（默认关）")
+    ap.add_argument("--acpi", action="store_true",
+                    help="构建 ACPI 表（现代 PCI 根 PNP0A08+MCFG/ECAM）。【当前有坑】"
+                         "ACPI 解释器启用后 /init 会静默 exit 0（根因待查，二分已确认与"
+                         " PCI0/MCFG/DSDT 内容无关，FACP-only 也复现）；默认关=legacy "
+                         "type1 路径，功能完整")
+    ap.add_argument("--efi", action="store_true",
+                    help="UEFI 交接态伪装（隐含 ACPI）：零页填 EL64+ES 表+runtime 桩"
+                         "+EFI memmap，内核走 efi_init 路径")
     args = ap.parse_args()
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -488,9 +628,10 @@ def main():
     initrd = open(args.initrd, "rb").read()
     cmdline = ("console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200 "
                "rdinit=/init nokaslr "
-               # lpj= 预设 BogoMIPS：ACPI 启用后 calibrate_delay 会死转（jiffies
-               # 相关，根因待查）；该值来自本 bzImage 历史 calibrate 输出
-               "lpj=14512128 " + args.append).encode()
+               # lpj= 预设 BogoMIPS；tsc_early_khz= 直接给定 TSC 频率——
+               # EFI/ACPI 路径下 efi_init 会等 tsc_khz 置位（25 次重试 + __delay），
+               # 而本机无 HPET/PMTIMER 参考导致校准永远失败 → 死等。该参数即终解。
+               "lpj=14512128 tsc_early_khz=2800000 " + args.append).encode()
     # 设备发现走 ACPI（DSDT 里描述 LNRO0005）；cmdline 注册方式该内核未编译
 
     kvm_fd = os.open("/dev/kvm", os.O_RDWR)
@@ -503,15 +644,30 @@ def main():
                      ctypes.addressof(ctypes.c_char.from_buffer(guest_mem)))
     fcntl.ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, buf, True)
     fcntl.ioctl(vm_fd, KVM_CREATE_IRQCHIP, 0)
+    # PIC 向量基址的编程由 guest 完成——前提是给它 MADT（见 build_acpi）。
     # PIT（8254 定时器）：内核校准延迟/TSC 用。没有它早期代码可能死循环等待定时器中断
     pit_buf = ctypes.create_string_buffer(64)
     fcntl.ioctl(vm_fd, 0x4040AE77, pit_buf, True)         # KVM_CREATE_PIT2
     fcntl.ioctl(vm_fd, KVM_SET_TSS_ADDR, 0x40000000)
 
-    # 64 位内核会在 startup_64 里立刻装自己的 IDT，不需要诊断 IDT
-    # install_debug_idt(guest_mem)
+    efi_fw = None
+    if args.efi:
+        # 固件区=独立 memslot：内核经 EPT 直读 EFI 表、直执行 runtime 桩
+        efi_fw = mmap.mmap(-1, EFI_FW_SIZE, mmap.MAP_SHARED | mmap.MAP_ANONYMOUS)
+        fbuf = ctypes.create_string_buffer(32)
+        struct.pack_into("<IIQQQ", fbuf, 0, 1, 0, EFI_FW_ADDR, EFI_FW_SIZE,
+                         ctypes.addressof(ctypes.c_char.from_buffer(efi_fw)))
+        fcntl.ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, fbuf, True)
+
     log("[*] 布置引导状态...")
-    entry, use_64bit = build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd)
+    # ACPI/EFI 表先行：零页的 efi_info 字段依赖表的实际地址
+    if (args.acpi or args.efi) and os.environ.get("LEMU_NO_ACPI") != "1":
+        dsdt_path = os.path.join(ROOT_DIR, "guest", "acpi", "DSDT.aml")
+        if os.path.exists(dsdt_path):
+            build_acpi(guest_mem, open(dsdt_path, "rb").read())
+    efi_tables = build_efi(efi_fw, ACPI_RSDP_ADDR) if (args.efi and efi_fw) else None
+    entry, use_64bit = build_boot_state(guest_mem, mem_size, kernel, cmdline, initrd,
+                                        efi=efi_tables)
 
     # ---- 极简 PIT 通道 2：给内核 TSC 校准当"合成晶体" ----
     # 客户机把 0xFFFF 装进通道 2（mode 0 一次性倒计时），随后轮询端口 0x61 bit5
@@ -585,6 +741,8 @@ def main():
         """DOORBELL 被写：宿主当场替客户机算 SHA256（同步完成 -> STATUS=DONE）
         真实设备这里会是异步线程 + 完成中断，同步版为了确定性先示人。"""
         import hashlib
+        log(f"    [doorbell] CMD={pci['bar_mem'][0x10]} LEN={struct.unpack_from('<I', pci['bar_mem'], 0x14)[0]} "
+            f"payload={bytes(pci['bar_mem'][0x200:0x210]).hex()}")
         op = pci["bar_mem"][0x10]
         ln = min(struct.unpack_from("<I", pci["bar_mem"], 0x14)[0], 256)
         if op == 1:                                       # CMD=SHA256
@@ -642,12 +800,6 @@ def main():
             fcntl.ioctl(vm_fd, KVM_IRQ_LINE, vbuf, True)
 
         netdev.on_interrupt = virtio_irq
-
-    # ACPI：无条件构建——PCI0 根桥现在也住在 DSDT 里，不再只是 virtio-net 的户口
-    # （曾长期只在 --net 时构建，导致"没开 --net 的引导其实从未有过 ACPI"）
-    dsdt_path = os.path.join(ROOT_DIR, "guest", "acpi", "DSDT.aml")
-    if os.path.exists(dsdt_path):
-        build_acpi(guest_mem, open(dsdt_path, "rb").read())
         log(f"    virtio-net 已挂载 @ 0xC0000000（TAP: {args.tap}，MAC 52:54:00:4C:45:4D）")
 
     tsc_khz = host_tsc_khz()
@@ -739,14 +891,16 @@ def main():
     import threading
     pit0_programmed = [False]      # 线程间共享标志
     def ticker():
+        # legacy(PIC) 打 IRQ0 线；ACPI/IOAPIC 模式经 ISO 接线打 GSI2
+        gsi = 2 if (args.acpi or args.efi) else 0
         while True:
             time.sleep(0.01)
             if not pit0_programmed[0]:
                 continue
             vbuf = ctypes.create_string_buffer(8)
-            struct.pack_into("<II", vbuf, 0, 0, 1)   # IRQ0 → high
+            struct.pack_into("<II", vbuf, 0, gsi, 1)   # → high
             fcntl.ioctl(vm_fd, KVM_IRQ_LINE, vbuf, True)
-            struct.pack_into("<II", vbuf, 0, 0, 0)   # IRQ0 → low
+            struct.pack_into("<II", vbuf, 0, gsi, 0)   # → low
             fcntl.ioctl(vm_fd, KVM_IRQ_LINE, vbuf, True)
     threading.Thread(target=ticker, daemon=True).start()
 
@@ -773,6 +927,20 @@ def main():
             sregs = ctypes.create_string_buffer(312)
             fcntl.ioctl(vcpu_fd, KVM_GET_SREGS, sregs, True)
             cr2, cr3 = struct.unpack_from("<QQ", sregs, 232)
+
+            # ---- 取证 0：虚拟 PIC 状态（overflow oops 疑似向量基址未编程）----
+            # kvm_irqchip = chip_id u32 + pad u32 + union{ kvm_pic_state(20B) | ioapic }
+            # kvm_pic_state: last_irr,irr,imr,isr,priority_add,irq_base,...
+            try:
+                ic = ctypes.create_string_buffer(520)
+                struct.pack_into("<I", ic, 0, 0)             # KVM_IRQCHIP_PIC_MASTER
+                fcntl.ioctl(vm_fd, 0xC208AE62, ic, True)     # KVM_GET_IRQCHIP
+                pic = bytes(ic[8:30])
+                log(f"[取证] PIC master: irq_base=0x{pic[5]:02X} imr=0x{pic[2]:02X} "
+                    f"irr=0x{pic[1]:02X} isr=0x{pic[3]:02X} init_state={pic[9]} "
+                    f"elcr=0x{pic[18]:02X} 原始={pic.hex()}")
+            except OSError as e:
+                log(f"[取证] PIC 转储失败: {e}")
             log(f"[{tag}] RIP=0x{rip:X} CR2=0x{cr2:X} CR3=0x{cr3:X}")
             log(f"[{tag}] RAX=0x{rax:X} RBX=0x{rbx:X} RCX=0x{rcx:X} RDX=0x{rdx:X}")
 
@@ -997,6 +1165,7 @@ def main():
         log("\n[lemu] Ctrl+C —— 关闭")
     except Timeout:
         log(f"\n[lemu] 超时/客户机停摆 —— 转储现场：")
+        log(f"    [诊断] exits={total_exits} 端口TOP: {port_count.most_common(6)}")
         dump_state("timeout")
     finally:
         try:

@@ -1,11 +1,3 @@
-[*] 布置引导状态...
-    xloadflags=0x003B  64位入口: 是
-    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
-    ACPI: RSDP@0xF0000 XSDT@0xF1000 FACP@0xF2000 DSDT(169B)@0xF4000 MCFG@0xF6000
-    virtio-net 已挂载 @ 0xC0000000（TAP: tap0，MAC 52:54:00:4C:45:4D）
-    CPUID: 精选白名单 12 条已灌入
-[*] 点火！客户机输出如下：
-------------------------------------------------------------
 
 
 KASLR disabled: 'nokaslr' on cmdline.
@@ -352,8 +344,3 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] CR2: ffff888004000000 CR3: 0000000003232000 CR4: 00000000000006b0
 [    0.000000] Kernel panic - not syncing: Fatal exception
 [    0.000000] Kernel Offset: disabled
-
-[lemu] 超时/客户机停摆 —— 转储现场：
-[timeout] RIP=0x1417 CR2=0xFFFF888004000000 CR3=0x0
-[timeout] RAX=0xED RBX=0x803E RCX=0x4600 RDX=0x60000091
-[lemu] 会话日志: /mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/logs/lemu-0926-140152.log

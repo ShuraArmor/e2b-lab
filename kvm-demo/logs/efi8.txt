@@ -1,8 +1,8 @@
 [*] 布置引导状态...
-    xloadflags=0x003B  64位入口: 是
-    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
     ACPI: RSDP@0xF0000 XSDT@0xF1000 FACP@0xF2000 DSDT(169B)@0xF4000 MCFG@0xF6000
-    virtio-net 已挂载 @ 0xC0000000（TAP: tap0，MAC 52:54:00:4C:45:4D）
+    xloadflags=0x003B  64位入口: 是
+    EFI: systab@0xE1004000 memmap@0xE1001000(432B) 签名 EL64
+    内核 15MB @ 0x100000  entry 64位 @ 0x100200  initrd 11742KB @ 0x1F488000
     CPUID: 精选白名单 12 条已灌入
 [*] 点火！客户机输出如下：
 ------------------------------------------------------------
@@ -31,15 +31,20 @@ KASLR disabled: 'nokaslr' on cmdline.
 [    0.000000] RAMDISK: [mem 0x1f488000-0x1fffffff]
 [    0.000000] ACPI: Early table checksum verification disabled
 [    0.000000] ACPI: RSDP 0x00000000000F0000 000024 (v02 LEMU  )
-[    0.000000] ACPI: XSDT 0x00000000000F1000 00003C (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
+[    0.000000] ACPI: XSDT 0x00000000000F1000 000044 (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
 [    0.000000] ACPI: FACP 0x00000000000F2000 000114 (v05 LEMU   LEMUVM01 00000001 LEMU 00000001)
 [    0.000000] ACPI: DSDT 0x00000000000F4000 0000A9 (v02 LEMU   LEMUVIRT 00000002 INTL 20230628)
 [    0.000000] ACPI: DSDT 0x00000000000F4000 0000A9 (v02 LEMU   LEMUVIRT 00000002 INTL 20230628)
 [    0.000000] ACPI: MCFG 0x00000000000F6000 00003C (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
+[    0.000000] ACPI: APIC 0x00000000000F8000 000040 (v01 LEMU   LEMUVM01 00000001 LEMU 00000001)
 [    0.000000] ACPI: Reserving FACP table memory at [mem 0xf2000-0xf2113]
 [    0.000000] ACPI: Reserving DSDT table memory at [mem 0xf4000-0xf40a8]
 [    0.000000] ACPI: Reserving DSDT table memory at [mem 0xf4000-0xf40a8]
 [    0.000000] ACPI: Reserving MCFG table memory at [mem 0xf6000-0xf603b]
+[    0.000000] ACPI: Reserving APIC table memory at [mem 0xf8000-0xf803f]
+[    0.000000] ACPI: [APIC:0x05] Invalid zero length
+[    0.000000] ACPI: Error parsing LAPIC address override entry
+[    0.000000] ACPI: Invalid BIOS MADT, disabling ACPI
 [    0.000000] No NUMA configuration found
 [    0.000000] Faking a node at [mem 0x0000000000000000-0x000000001fffffff]
 [    0.000000] NODE_DATA(0) allocated [mem 0x1f466000-0x1f487fff]
@@ -92,8 +97,6 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] printk: console [ttyS0] enabled
 [    0.000000] printk: bootconsole [earlyser0] disabled
 [    0.000000] printk: bootconsole [earlyser0] disabled
-[    0.000000] ACPI: Core revision 20230628
-[    0.000000] ACPI: setting ELCR to 0001 (from 0000)
 [    0.000000] APIC: ACPI MADT or MP tables are not detected
 [    0.000000] APIC: Switch to virtual wire mode setup with no configuration
 [    0.000000] Not enabling interrupt remapping due to skipped IO-APIC setup
@@ -227,36 +230,13 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] audit: type=2000 audit(943920000.000:1): state=initialized audit_enabled=0 res=1
 [    0.000000] cpuidle: using governor ladder
 [    0.000000] cpuidle: using governor menu
-[    0.000000] acpiphp: ACPI Hot Plug PCI Controller Driver version: 0.5
 [    0.000000] dca service started, version 1.12.1
-[    0.000000] PCI: no memory for MCFG entries
 [    0.000000] PCI: Using configuration type 1 for base access
 [    0.000000] kprobes: kprobe jump-optimization is enabled. All kprobes are optimized if possible.
 [    0.000000] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
 [    0.000000] HugeTLB: 28 KiB vmemmap can be freed for a 2.00 MiB page
 [    0.000000] cryptd: max_cpu_qlen set to 1000
-[    0.000000] ACPI: Added _OSI(Module Device)
-[    0.000000] ACPI: Added _OSI(Processor Device)
-[    0.000000] ACPI: Added _OSI(Processor Aggregator Device)
-[    0.000000] ACPI: 1 ACPI AML tables successfully acquired and loaded
-[    0.000000] ACPI: _OSC evaluated successfully for all CPUs
-[    0.000000] ACPI: Interpreter enabled
-[    0.000000] ACPI: PM: (supports S0)
-[    0.000000] ACPI: Using PIC for interrupt routing
-[    0.000000] PCI: no memory for MCFG entries
-[    0.000000] PCI: Using host bridge windows from ACPI; if necessary, use "pci=nocrs" and report a bug
-[    0.000000] PCI: Using E820 reservations for host bridge windows
-[    0.000000] ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00])
-[    0.000000] acpi PNP0A08:00: _OSC: OS supports [ASPM ClockPM Segments MSI HPX-Type3]
-[    0.000000] acpi PNP0A08:00: _OSC: not requesting OS control; OS requires [ExtendedConfig ASPM ClockPM MSI]
-[    0.000000] acpi PNP0A08:00: _OSC: platform retains control of PCIe features (AE_NOT_FOUND)
-[    0.000000] acpi PNP0A08:00: fail to add MMCONFIG information, can't access extended configuration space under this bridge
-[    0.000000] PCI host bridge to bus 0000:00
-[    0.000000] pci_bus 0000:00: root bus resource [mem 0xc0001000-0xc000ffff window]
-[    0.000000] pci_bus 0000:00: root bus resource [bus 00]
-[    0.000000] pci 0000:00:00.0: [4c4d:0001] type 00 class 0x060000
-[    0.000000] pci 0000:00:01.0: [4c4d:4c4d] type 00 class 0x120000
-[    0.000000] pci 0000:00:01.0: reg 0x10: [mem 0xc0001000-0xc0001fff]
+[    0.000000] ACPI: Interpreter disabled.
 [    0.000000] iommu: Default domain type: Translated
 [    0.000000] iommu: DMA domain TLB invalidation policy: lazy mode
 [    0.000000] SCSI subsystem initialized
@@ -268,14 +248,21 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] NetLabel:  domain hash size = 128
 [    0.000000] NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
 [    0.000000] NetLabel:  unlabeled traffic allowed by default
-[    0.000000] PCI: Using ACPI for IRQ routing
+[    0.000000] PCI: Probing PCI hardware
+[    0.000000] PCI host bridge to bus 0000:00
+[    0.000000] pci_bus 0000:00: root bus resource [io  0x0000-0xffff]
+[    0.000000] pci_bus 0000:00: root bus resource [mem 0x00000000-0xffffffffffff]
+[    0.000000] pci_bus 0000:00: No busn resource found for root bus, will use [bus 00-ff]
+[    0.000000] pci 0000:00:00.0: [4c4d:0001] type 00 class 0x060000
+[    0.000000] pci 0000:00:01.0: [4c4d:4c4d] type 00 class 0x120000
+[    0.000000] pci 0000:00:01.0: reg 0x10: [mem 0xc0001000-0xc0001fff]
+[    0.000000] pci_bus 0000:00: busn_res: [bus 00-ff] end is updated to 00
 [    0.000000] vgaarb: loaded
 [    0.000000] clocksource: Switched to clocksource refined-jiffies
 [    0.000000] VFS: Disk quotas dquot_6.6.0
 [    0.000000] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
 [    0.000000] FS-Cache: Loaded
-[    0.000000] pnp: PnP ACPI init
-[    0.000000] pnp: PnP ACPI: found 0 devices
+[    0.000000] pnp: PnP ACPI: disabled
 [    0.000000] NET: Registered PF_INET protocol family
 [    0.000000] IP idents hash table entries: 8192 (order: 4, 65536 bytes, linear)
 [    0.000000] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
@@ -287,7 +274,8 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes, linear)
 [    0.000000] NET: Registered PF_UNIX/PF_LOCAL protocol family
 [    0.000000] NET: Registered PF_XDP protocol family
-[    0.000000] pci_bus 0000:00: resource 4 [mem 0xc0001000-0xc000ffff window]
+[    0.000000] pci_bus 0000:00: resource 4 [io  0x0000-0xffff]
+[    0.000000] pci_bus 0000:00: resource 5 [mem 0x00000000-0xffffffffffff]
 [    0.000000] PCI: CLS 0 bytes, default 64
 [    0.000000] platform rtc_cmos: registered platform RTC device (no PNP device found)
 [    0.000000] Trying to unpack rootfs image as initramfs...
@@ -310,11 +298,11 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] CPU: 0 PID: 1 Comm: swapper/0 Tainted: G        W          6.6.114.1-microsoft-standard-WSL2 #1
 [    0.000000] RIP: 0010:_raw_spin_unlock_irqrestore+0x21/0x40
 [    0.000000] Code: 90 90 90 90 90 90 90 90 90 f3 0f 1e fa 0f 1f 44 00 00 55 48 89 e5 c6 07 00 0f 1f 00 f7 c6 00 02 00 00 74 06 fb 0f 1f 44 00 00 <65> ff 0d 00 52 fb 7d 74 06 5d c3 cc cc cc cc 0f 1f 44 00 00 5d c3
-[    0.000000] RSP: 0000:ffffc9000000fcb0 EFLAGS: 00000206
+[    0.000000] RSP: 0000:ffffc9000000bcb0 EFLAGS: 00000206
 [    0.000000] RAX: 0000000000000000 RBX: ffffffff83c41ca0 RCX: 0000000000000000
 [    0.000000] RDX: 00000000000003f9 RSI: 0000000000000202 RDI: ffffffff83c41ca0
-[    0.000000] RBP: ffffc9000000fcb0 R08: ffffffff8323dc50 R09: 0000000000000000
-[    0.000000] R10: ffff888000edb480 R11: ffff888000edb480 R12: 0000000000000001
+[    0.000000] RBP: ffffc9000000bcb0 R08: ffffffff8323dc50 R09: 0000000000000000
+[    0.000000] R10: ffff888000f15040 R11: ffff888000f15040 R12: 0000000000000001
 [    0.000000] R13: 0000000000000001 R14: 0000000000000202 R15: 0000000000000100
 [    0.000000] FS:  0000000000000000(0000) GS:ffff88801ea00000(0000) knlGS:0000000000000000
 [    0.000000] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
@@ -341,11 +329,11 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] ---[ end trace 0000000000000000 ]---
 [    0.000000] RIP: 0010:_raw_spin_unlock_irqrestore+0x21/0x40
 [    0.000000] Code: 90 90 90 90 90 90 90 90 90 f3 0f 1e fa 0f 1f 44 00 00 55 48 89 e5 c6 07 00 0f 1f 00 f7 c6 00 02 00 00 74 06 fb 0f 1f 44 00 00 <65> ff 0d 00 52 fb 7d 74 06 5d c3 cc cc cc cc 0f 1f 44 00 00 5d c3
-[    0.000000] RSP: 0000:ffffc9000000fcb0 EFLAGS: 00000206
+[    0.000000] RSP: 0000:ffffc9000000bcb0 EFLAGS: 00000206
 [    0.000000] RAX: 0000000000000000 RBX: ffffffff83c41ca0 RCX: 0000000000000000
 [    0.000000] RDX: 00000000000003f9 RSI: 0000000000000202 RDI: ffffffff83c41ca0
-[    0.000000] RBP: ffffc9000000fcb0 R08: ffffffff8323dc50 R09: 0000000000000000
-[    0.000000] R10: ffff888000edb480 R11: ffff888000edb480 R12: 0000000000000001
+[    0.000000] RBP: ffffc9000000bcb0 R08: ffffffff8323dc50 R09: 0000000000000000
+[    0.000000] R10: ffff888000f15040 R11: ffff888000f15040 R12: 0000000000000001
 [    0.000000] R13: 0000000000000001 R14: 0000000000000202 R15: 0000000000000100
 [    0.000000] FS:  0000000000000000(0000) GS:ffff88801ea00000(0000) knlGS:0000000000000000
 [    0.000000] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
@@ -354,6 +342,7 @@ Poking KASLR using RDRAND RDTSC...
 [    0.000000] Kernel Offset: disabled
 
 [lemu] 超时/客户机停摆 —— 转储现场：
-[timeout] RIP=0x1417 CR2=0xFFFF888004000000 CR3=0x0
-[timeout] RAX=0xED RBX=0x803E RCX=0x4600 RDX=0x60000091
-[lemu] 会话日志: /mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/logs/lemu-0926-140152.log
+[取证] PIC master: irq_base=0x00 imr=0x00 irr=0x00 isr=0x10 init_state=0 elcr=0x00 原始=000000100000000000000000000000f8000000000000
+[timeout] RIP=0x1026 CR2=0xFFFF888004000000 CR3=0x0
+[timeout] RAX=0x1400 RBX=0xE8B4 RCX=0x1000 RDX=0x60000010
+[lemu] 会话日志: /mnt/e/ProjBuild/QIUZHAO/Sandbox/e2b-lab/kvm-demo/logs/lemu-0926-145409.log

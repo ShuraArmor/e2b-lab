@@ -60,6 +60,11 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+echo INIT-MARK-1-START
+/bin/busybox --install -s /bin
+echo INIT-MARK-2-INSTALL-OK
+mkdir -p /proc /sys /dev /tmp
+python3 /opt/acc_test.py || echo ACC-TEST-FAILED
 echo ""
 echo "=============================================="
 echo " LEMU + Alpine/musl + CPython"
